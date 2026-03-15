@@ -1,0 +1,45 @@
+{
+    "skill": {
+        "name": "ios_unused_code_scanner",
+        "version": "1.0.0",
+        "description": "iOS无用代码及资源扫描Agent Skill",
+        "author": "AI Assistant",
+        "created_at": "2024-01-25T14:15:35Z",
+        "updated_at": "2024-01-25T14:15:35Z"
+    },
+    
+    "scan_config": {
+        "project_root": ".",
+        "output_dir": "unused_scan_results",
+        "enable_code_scan": true,
+        "enable_resource_scan": true,
+        "enable_reference_analysis": true,
+        "enable_method_scan": false,
+        "generate_html_report": true,
+        "generate_csv_report": true,
+        "sort_by_size": true,
+        "min_file_size_bytes": 0,
+        "max_scan_depth": 10,
+        "file_source": "directory",
+        "xcodeproj_path": null
+    },
+    
+    "ignore_rules": {
+        "ignore_directories": ["Pods", ".git", "build", "DerivedData", "Carthage", ".clangd"],
+        "ignore_files": ["main.m", "AppDelegate.h", "AppDelegate.m", "main.swift", "Podfile", "Podfile.lock"],
+        "ignore_file_patterns": ["*Test*.{h,m,swift}", "*Mock*.{h,m,swift}", "*Spec*.{h,m,swift}"]
+    },
+    
+    "whitelist": {
+        "classes": [
+        ],
+        "class_name_patterns": [
+        ],
+        "methods": ["viewDidLoad", "viewWillAppear:", "viewDidAppear:", "application:didFinishLaunchingWithOptions:"],
+        "properties": ["view", "navigationController", "title"]
+    },
+    
+    "code_extensions": [".h", ".m", ".mm", ".c", ".cpp"],
+
+    "resource_extensions": [".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".xib", ".storyboard", ".xcassets", ".strings", ".json"]
+}

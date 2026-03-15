@@ -1,0 +1,14 @@
+# iOS无用代码及资源扫描 Agent Skill 依赖项
+# Python 3.6+
+# 核心扫描器仅使用标准库，无强制第三方依赖
+
+# 测试依赖（可选）
+pytest>=6.2.0
+pytest-cov>=2.12.0
+
+# 开发/可选工具（可选）
+# click>=8.0.0
+# colorama>=0.4.4
+# tqdm>=4.60.0
+# pylint>=2.8.0
+# black>=21.5b0

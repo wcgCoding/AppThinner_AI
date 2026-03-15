@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="22225" systemVersion="23A344" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
+    <entity name="AnalysisProject" representedClassName="AnalysisProject" syncable="YES">
+        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="duplicateCodeGroupsData" optional="YES" attributeType="Binary"/>
+        <attribute name="duplicateResourceGroupsData" optional="YES" attributeType="Binary"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="podsDependencyData" optional="YES" attributeType="Binary"/>
+        <attribute name="ipaPath" optional="YES" attributeType="String"/>
+        <attribute name="linkmapPath" optional="YES" attributeType="String"/>
+        <attribute name="name" optional="NO" attributeType="String"/>
+        <attribute name="projectPath" optional="YES" attributeType="String"/>
+        <attribute name="totalSize" optional="NO" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="summaryCodeSize" optional="NO" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="summaryResourceSize" optional="NO" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="summaryFrameworkSize" optional="NO" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="updatedAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <relationship name="analysisResults" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="AnalysisResult" inverseName="project" inverseEntity="AnalysisResult"/>
+        <relationship name="externalUnusedData" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="ExternalUnusedData" inverseName="project" inverseEntity="ExternalUnusedData"/>
+    </entity>
+    <entity name="AnalysisResult" representedClassName="AnalysisResult" syncable="YES">
+        <attribute name="codeSize" optional="NO" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="fileName" optional="NO" attributeType="String"/>
+        <attribute name="fileType" optional="NO" attributeType="String"/>
+        <attribute name="frameworkSize" optional="NO" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="isExternallyMarked" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="isUnusedCode" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="isUnusedResource" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="relativePath" optional="NO" attributeType="String"/>
+        <attribute name="resourceSize" optional="NO" attributeType="Integer 64" defaultValueString="0" usesScalarValueType="YES"/>
+        <relationship name="project" optional="NO" maxCount="1" deletionRule="Nullify" destinationEntity="AnalysisProject" inverseName="analysisResults" inverseEntity="AnalysisProject"/>
+    </entity>
+    <entity name="ExternalUnusedData" representedClassName="ExternalUnusedData" syncable="YES">
+        <attribute name="dataType" optional="NO" attributeType="String"/>
+        <attribute name="fileName" optional="NO" attributeType="String"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="importedAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="relativePath" optional="NO" attributeType="String"/>
+        <relationship name="project" optional="NO" maxCount="1" deletionRule="Nullify" destinationEntity="AnalysisProject" inverseName="externalUnusedData" inverseEntity="AnalysisProject"/>
+    </entity>
+</model>

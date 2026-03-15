@@ -1,0 +1,150 @@
+/* Main tabs */
+"Analysis" = "分析";
+"Visualization" = "可视化";
+"Optimization" = "优化";
+"Comparison" = "对比";
+
+/* MainView & global UI */
+"Drop files here to analyze" = "将文件拖拽到此处进行分析";
+"Supported: .ipa files, linkmap.txt, project directories" = "支持：.ipa 文件、linkmap.txt、工程目录";
+"iOS App Analyzer" = "iOS 应用体积分析工具";
+"Version 1.0.0" = "版本 1.0.0";
+"Professional iOS app size analysis tool for macOS" = "专业的 iOS 应用体积分析工具（macOS）";
+"View Keyboard Shortcuts" = "查看键盘快捷键";
+"Close" = "关闭";
+"Current Project" = "当前工程";
+"Analysis History" = "分析历史";
+"No previous analyses" = "暂无历史分析记录";
+"Open Files" = "打开文件";
+"Export" = "导出";
+"Export results" = "导出结果";
+"About" = "关于";
+"Error" = "错误";
+"OK" = "好";
+
+/* Project summary */
+"Total Size" = "总大小";
+"Potential Savings" = "潜在可优化体积";
+"Updated:" = "更新于：";
+
+/* AnalysisView */
+"iOS App Analysis" = "iOS 应用分析";
+"Show Details" = "显示详情";
+"Start Analysis" = "开始分析";
+"Input Files" = "输入文件";
+"Project Directory" = "工程目录";
+"Select the iOS project directory" = "选择 iOS 工程目录";
+"IPA File" = "IPA 文件";
+"Select the .ipa file to analyze" = "选择要分析的 .ipa 文件";
+"Linkmap File" = "Linkmap 文件";
+"Select the linkmap.txt file" = "选择 linkmap.txt 文件";
+"Clear" = "清除";
+"Select" = "选择";
+
+/* External data & progress (short) */
+"External Data" = "外部数据";
+"Import External Data" = "导入外部数据";
+"Analysis Progress" = "分析进度";
+"Estimated Time Remaining" = "预计剩余时间";
+
+/* OptimizationView */
+"No Analysis Available" = "暂无可用分析结果";
+"Run an analysis first to see optimization options" = "请先运行一次分析以查看优化选项";
+"Options" = "选项";
+"Optimization Settings" = "优化设置";
+"Choose Backup Location" = "选择备份位置";
+"Reset Selection" = "重置选择";
+"Show Backup" = "显示备份";
+"Create Backup" = "创建备份";
+"Create at Default Location" = "在默认位置创建";
+"Choose Location" = "选择位置";
+"Cancel" = "取消";
+"A backup will be created before performing any optimization operations. Choose where to save the backup." = "在执行任何优化操作之前会创建备份，请选择备份保存位置。";
+"Optimization Summary" = "优化概览";
+"Estimated Savings" = "预计节省体积";
+"Affected Files" = "受影响的文件数";
+"Risk Level" = "风险等级";
+"Recommendations" = "优化建议";
+
+/* ComparisonView */
+"Project Comparison" = "工程对比";
+"Export" = "导出";
+"Clear All" = "清空";
+"HTML Report" = "HTML 报告";
+"CSV Data" = "CSV 数据";
+"JSON Data" = "JSON 数据";
+"Select Projects to Compare" = "选择要对比的工程";
+"Clear Selection" = "清除选择";
+"Search projects..." = "搜索工程…";
+"Sort" = "排序";
+"Date (Newest)" = "日期（最新优先）";
+"Date (Oldest)" = "日期（最早优先）";
+"Size (Largest)" = "大小（从大到小）";
+"Size (Smallest)" = "大小（从小到大）";
+"Name (A-Z)" = "名称（A-Z）";
+"No analysis projects available" = "暂无可用分析工程";
+"Selected: %d/%d project%s" = "已选择：%d/%d 个工程";
+"Showing %d of %d" = "显示 %d / %d 个";
+
+/* HistoryView */
+"History View" = "历史视图";
+"Timeline" = "时间线";
+"Projects" = "工程";
+"Storage" = "存储";
+"Analysis History" = "分析历史";
+"Export" = "导出";
+"Cleanup" = "清理";
+"Size Progression Over Time" = "体积随时间变化";
+"Recent Analyses" = "最近分析";
+"Savings: %@" = "节省：%@";
+"Recommendations" = "建议";
+"Cleanup Candidates" = "可清理项";
+"Select a Project" = "选择一个工程";
+"Choose a project to view its analysis history" = "选择一个工程查看其分析历史";
+"%d analyses" = "%d 次分析";
+
+/* TreemapView */
+"Treemap Visualization" = "矩形树图";
+"Run an analysis first to see the treemap visualization" = "请先运行分析以查看矩形树图可视化结果";
+"Search..." = "搜索…";
+"Show Unused Only" = "仅显示未使用";
+"Treemap visualization" = "矩形树图可视化";
+"Double-tap to drill down, hover for details" = "双击下钻，悬停查看详情";
+
+/* Keyboard shortcuts help */
+"Keyboard Shortcuts" = "键盘快捷键";
+"File Operations" = "文件操作";
+"Open Files" = "打开文件";
+"Export Results" = "导出结果";
+"Refresh History" = "刷新历史";
+"Navigation" = "导航";
+"Analysis Tab" = "分析标签页";
+"Visualization Tab" = "可视化标签页";
+"Optimization Tab" = "优化标签页";
+"Comparison Tab" = "对比标签页";
+"Analysis" = "分析";
+"Start Analysis" = "开始分析";
+"Show Help" = "显示帮助";
+"About" = "关于";
+"Optimization" = "优化";
+"Select All" = "全选";
+"Deselect All" = "取消全选";
+"Optimize Selected" = "优化所选";
+"Clear Selection" = "清空选择";
+"Comparison" = "对比";
+"Compare Projects" = "对比工程";
+"Export Report" = "导出报告";
+"Treemap Navigation" = "矩形树图导航";
+"Navigate Back" = "返回";
+"Drill Down" = "下钻";
+"Parent Directory" = "父级目录";
+"Child Directory" = "子级目录";
+
+/* Accessibility descriptions */
+"Open files" = "打开文件";
+"Export results" = "导出结果";
+"Start analysis" = "开始分析";
+"Switch between tabs" = "切换标签页";
+"Refresh analysis history" = "刷新分析历史";
+"Show keyboard shortcuts" = "显示键盘快捷键";
+

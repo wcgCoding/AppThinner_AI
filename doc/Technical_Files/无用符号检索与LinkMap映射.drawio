@@ -1,0 +1,59 @@
+<mxfile host="app.diagrams.net" agent="AI" version="29.6.1">
+  <diagram name="无用符号检索与映射" id="unused-symbol-flow">
+    <mxGraphModel dx="1234" dy="764" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1240" pageHeight="1754" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- 起点：输入数据 -->
+        <mxCell id="start" value="输入数据&#10;- Mach-O 主二进制&#10;- LinkMap (object files + symbols)&#10;- CodeSizeInfo (按 relativePath 聚合)&#10;- 无用类列表 (UnusedCode)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="80" y="80" width="340" height="110" as="geometry" />
+        </mxCell>
+
+        <!-- 步骤1：解析 LinkMap -->
+        <mxCell id="step1" value="步骤1：解析 LinkMap&#10;- LinkmapAnalyzer.parseLinkmapFile → LinkmapParseResult&#10;  · objectFileInfos (.o 列表)&#10;  · symbols (地址 / 大小 / objectFileIndex)&#10;- mapObjectFilesToProjectStructure → [CodeSizeInfo]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="80" y="230" width="380" height="130" as="geometry" />
+        </mxCell>
+
+        <!-- 步骤2：无用类分析 (Mach-O) -->
+        <mxCell id="step2" value="步骤2：无用类分析 (Mach-O)&#10;- BinaryUnusedCodeAnalyzer.analyzeUnusedClasses&#10;  · 从 classlist / classrefs / categories 提取&#10;  · 计算 definedClasses − referencedClasses&#10;  · 应用白名单过滤 (VC / View / Delegate 等)&#10;- 产出 UnusedCode 列表 (className + filePath + estimatedSize)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="80" y="400" width="420" height="150" as="geometry" />
+        </mxCell>
+
+        <!-- 步骤3：策略1 - 基于无用类的无用符号 -->
+        <mxCell id="step3" value="步骤3：策略1 - 基于无用类的无用符号&#10;- 构建 unusedClassNames = {UnusedCode.className}&#10;- 遍历 LinkMap / CodeSizeInfo 中所有符号&#10;  · 用 ObjC 规则解析类名：_OBJC_CLASS_$_ / _-[Class method] 等&#10;  · 若类名 ∈ unusedClassNames，则：&#10;    · 直接记为无用符号 (UnusedSymbolRecord)&#10;    · 记录 symbolName / size / objectFileIndex / resolvedRelativePath / className" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="80" y="590" width="460" height="170" as="geometry" />
+        </mxCell>
+
+        <!-- 步骤4：策略2 - 基于符号引用的无用符号 -->
+        <mxCell id="step4" value="步骤4：策略2 - 基于符号引用的无用符号&#10;- 对未命中任何无用类的剩余符号：&#10;  · 从 Mach-O 符号表 (LC_SYMTAB) 收集已定义符号索引 / 地址&#10;  · 从重定位 / 间接符号表收集被引用符号索引&#10;  · 计算 定义 − 被引用 得到未被引用符号集合&#10;- 将这些符号按地址与 LinkMap 符号对齐&#10;  · 生成额外的 UnusedSymbolRecord (className 为空或未知)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="80" y="800" width="520" height="190" as="geometry" />
+        </mxCell>
+
+        <!-- 步骤5：按 Object File 聚合与输出 -->
+        <mxCell id="step5" value="步骤5：按 Object File 聚合与输出&#10;- 将所有 UnusedSymbolRecord 按 objectFileIndex 分组&#10;  · 结合 LinkmapParseResult.objectFileInfos 得到 objectFilePath&#10;  · 结合 CodeSizeInfo 得到 resolvedRelativePath&#10;- 生成 UnusedSymbolMappingResult&#10;  · unusedSymbols：无用符号明细列表&#10;  · byObjectFile：index → (objectFilePath, resolvedPath, symbols[])&#10;  · totalUnusedSymbolSize：无用符号总体积&#10;- 作为无用体积的一部分，参与统计 / 展示" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="80" y="1030" width="520" height="200" as="geometry" />
+        </mxCell>
+
+        <!-- 连接线 -->
+        <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#333333;" edge="1" parent="1" source="start" target="step1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#333333;" edge="1" parent="1" source="step1" target="step2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#333333;" edge="1" parent="1" source="step2" target="step3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#333333;" edge="1" parent="1" source="step3" target="step4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeColor=#333333;" edge="1" parent="1" source="step4" target="step5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
+

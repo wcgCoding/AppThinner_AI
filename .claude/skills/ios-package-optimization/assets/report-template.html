@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>iOS 安装包优化分析报告 - {{project.name}}</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --bg-elevated: #121729;
+      --bg-soft: #181f33;
+      --border-subtle: rgba(255,255,255,0.06);
+      --accent: #4f8cff;
+      --accent-soft: rgba(79,140,255,0.15);
+      --accent-strong: #ffb347;
+      --text-main: #f5f7ff;
+      --text-sub: #9ca4c7;
+      --text-faded: #6d7495;
+      --danger: #ff6b81;
+      --danger-soft: rgba(255,107,129,0.1);
+      --success: #3fd6b1;
+      --chip-bg: rgba(255,255,255,0.04);
+      --radius-lg: 16px;
+      --radius-md: 10px;
+      --radius-sm: 999px;
+      --shadow-soft: 0 18px 45px rgba(4,8,28,0.85);
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 32px 24px 48px;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, -apple-system-body;
+      background: radial-gradient(circle at top left, #20294a 0, #050816 48%, #02030a 100%);
+      color: var(--text-main);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .page {
+      max-width: 1120px;
+      margin: 0 auto;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+      align-items: flex-start;
+      margin-bottom: 28px;
+    }
+
+    .title-block h1 {
+      margin: 0 0 6px;
+      font-size: 26px;
+      letter-spacing: 0.02em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .title-tag {
+      font-size: 12px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, rgba(79,140,255,0.18), rgba(63,214,177,0.16));
+      border: 1px solid rgba(123,178,255,0.4);
+      color: var(--text-sub);
+    }
+
+    .meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 18px;
+      font-size: 12px;
+      color: var(--text-sub);
+      align-items: center;
+    }
+
+    .meta-label {
+      color: var(--text-faded);
+      margin-right: 4px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      font-size: 11px;
+    }
+
+    .pill-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 0 4px rgba(79,140,255,0.22);
+    }
+
+    .pill-danger .pill-dot {
+      background: var(--danger);
+      box-shadow: 0 0 0 4px rgba(255,107,129,0.24);
+    }
+
+    .pill-success .pill-dot {
+      background: var(--success);
+      box-shadow: 0 0 0 4px rgba(63,214,177,0.24);
+    }
+
+    .summary-card {
+      min-width: 260px;
+      padding: 14px 16px 14px;
+      border-radius: var(--radius-lg);
+      background:
+        radial-gradient(circle at top right, rgba(79,140,255,0.28) 0, transparent 55%),
+        radial-gradient(circle at bottom left, rgba(63,214,177,0.18) 0, transparent 55%),
+        rgba(9,11,25,0.94);
+      box-shadow: var(--shadow-soft);
+      border: 1px solid rgba(255,255,255,0.09);
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0,1fr));
+      gap: 12px 18px;
+      margin-top: 8px;
+    }
+
+    .summary-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .summary-label {
+      font-size: 11px;
+      color: var(--text-faded);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+
+    .summary-value {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .summary-sub {
+      font-size: 11px;
+      color: var(--text-sub);
+    }
+
+    main {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    section {
+      border-radius: var(--radius-lg);
+      background: linear-gradient(145deg, rgba(10,13,30,0.98), rgba(7,10,25,0.98));
+      border: 1px solid var(--border-subtle);
+      padding: 16px 18px 18px;
+      box-shadow: 0 18px 35px rgba(4,6,18,0.7);
+    }
+
+    section:not(:last-child) {
+      position: relative;
+      overflow: hidden;
+    }
+
+    section:not(:last-child)::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at top left, rgba(79,140,255,0.08) 0, transparent 60%),
+        radial-gradient(circle at bottom right, rgba(255,179,71,0.06) 0, transparent 55%);
+      opacity: 0.9;
+      mix-blend-mode: soft-light;
+    }
+
+    section > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    section h2 {
+      margin: 0 0 10px;
+      font-size: 17px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    section h2 span.badge {
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.08);
+      color: var(--text-sub);
+      background: rgba(255,255,255,0.02);
+    }
+
+    section p {
+      margin: 4px 0;
+      font-size: 13px;
+      color: var(--text-sub);
+      line-height: 1.6;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 6px 0 2px;
+    }
+
+    .chip {
+      font-size: 11px;
+      padding: 3px 9px;
+      border-radius: var(--radius-sm);
+      background: var(--chip-bg);
+      border: 1px solid rgba(255,255,255,0.06);
+      color: var(--text-sub);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .chip strong {
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .chip-hot {
+      border-color: rgba(255,107,129,0.6);
+      background: var(--danger-soft);
+      color: #ffd7df;
+    }
+
+    .chip-hot strong {
+      color: #ffe5ea;
+    }
+
+    .chip-high {
+      border-color: rgba(255,179,71,0.7);
+      background: rgba(255,179,71,0.08);
+      color: #ffe2b8;
+    }
+
+    .chip-high strong {
+      color: #ffe8c8;
+    }
+
+    .chip-safe {
+      border-color: rgba(63,214,177,0.7);
+      background: rgba(63,214,177,0.08);
+      color: #c5f4e9;
+    }
+
+    .list-two-col {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px,1fr));
+      gap: 10px 18px;
+      margin-top: 8px;
+    }
+
+    ul {
+      margin: 4px 0 0;
+      padding-left: 18px;
+      font-size: 13px;
+      color: var(--text-sub);
+      line-height: 1.7;
+    }
+
+    ul li + li {
+      margin-top: 2px;
+    }
+
+    li strong {
+      color: var(--text-main);
+      font-weight: 600;
+    }
+
+    .table-wrapper {
+      margin-top: 8px;
+      border-radius: var(--radius-md);
+      border: 1px solid rgba(255,255,255,0.06);
+      background: linear-gradient(135deg, rgba(18,23,42,0.95), rgba(10,13,28,0.95));
+      overflow: hidden;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    thead {
+      background: rgba(255,255,255,0.02);
+    }
+
+    th, td {
+      padding: 7px 10px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      white-space: nowrap;
+    }
+
+    th {
+      font-weight: 500;
+      color: var(--text-faded);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    tbody tr:nth-child(odd) td {
+      background: rgba(255,255,255,0.01);
+    }
+
+    .col-path {
+      max-width: 280px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text-sub);
+    }
+
+    .col-badge {
+      font-size: 11px;
+      font-weight: 500;
+      padding: 2px 7px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.08);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .badge-p0 {
+      border-color: rgba(255,107,129,0.9);
+      background: rgba(255,107,129,0.12);
+      color: #ffd1d8;
+    }
+
+    .badge-p1 {
+      border-color: rgba(255,179,71,0.9);
+      background: rgba(255,179,71,0.12);
+      color: #ffe2b4;
+    }
+
+    .badge-p2 {
+      border-color: rgba(79,140,255,0.9);
+      background: rgba(79,140,255,0.12);
+      color: #d2e2ff;
+    }
+
+    .tag-risk {
+      font-size: 11px;
+      padding: 1px 6px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.02);
+      color: var(--text-sub);
+    }
+
+    .tag-risk-high {
+      border-color: rgba(255,107,129,0.9);
+      background: rgba(255,107,129,0.12);
+      color: #ffd2da;
+    }
+
+    .tag-risk-mid {
+      border-color: rgba(255,179,71,0.9);
+      background: rgba(255,179,71,0.12);
+      color: #ffe3b6;
+    }
+
+    .checklist {
+      margin-top: 8px;
+      font-size: 13px;
+    }
+
+    .checklist-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 4px 0;
+    }
+
+    .check-icon {
+      margin-top: 2px;
+      width: 14px;
+      height: 14px;
+      border-radius: 4px;
+      border: 1px solid rgba(255,255,255,0.28);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      color: var(--success);
+      background: rgba(63,214,177,0.08);
+    }
+
+    .check-icon.warn {
+      color: var(--accent-strong);
+      border-color: rgba(255,179,71,0.85);
+      background: rgba(255,179,71,0.06);
+    }
+
+    .check-icon.danger {
+      color: var(--danger);
+      border-color: rgba(255,107,129,0.9);
+      background: rgba(255,107,129,0.06);
+    }
+
+    .mono {
+      font-family: var(--mono);
+    }
+
+    .muted {
+      color: var(--text-faded);
+    }
+
+    .foot-note {
+      margin-top: 10px;
+      font-size: 11px;
+      color: var(--text-faded);
+    }
+
+    @media (max-width: 720px) {
+      body {
+        padding: 18px 12px 32px;
+      }
+      header {
+        flex-direction: column;
+      }
+      .summary-card {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <div class="title-block">
+        <h1>
+          iOS 安装包优化分析报告 - {{project.name}}
+          <span class="title-tag">AppThinner AI 可分析数据 · 自动生成报告</span>
+        </h1>
+        <div class="meta-row">
+          <span><span class="meta-label">工程路径</span><span class="mono">{{project.projectPath}}</span></span>
+          <span><span class="meta-label">IPA</span><span class="mono">{{project.ipaPath}}</span></span>
+          <span><span class="meta-label">LinkMap</span><span class="mono">{{project.linkmapPath}}</span></span>
+          <span class="pill">
+            <span class="pill-dot"></span>
+            分析数据来源 AppThinner Treemap 导出
+          </span>
+        </div>
+      </div>
+      <aside class="summary-card">
+        <div class="meta-row" style="margin-bottom:4px;">
+          <span class="meta-label">报告生成时间</span>
+          <span>{{exportedAt}}</span>
+        </div>
+        <div class="summary-grid">
+          <div class="summary-item">
+            <div class="summary-label">安装包总体积</div>
+            <div class="summary-value">{{summary.totalSizeHuman}}</div>
+            <div class="summary-sub mono">{{summary.totalSizeKB}} KB</div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-label">可潜在节约空间</div>
+            <div class="summary-value" style="color:var(--accent-strong);">{{summary.potentialSavingsHuman}}</div>
+            <div class="summary-sub mono">{{summary.potentialSavingsKB}} KB</div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-label">代码体积（Code）</div>
+            <div class="summary-value">{{summary.codeSizeHuman}}</div>
+            <div class="summary-sub mono">{{summary.codeSizeKB}} KB</div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-label">资源体积（Resource）</div>
+            <div class="summary-value">{{summary.resourceSizeHuman}}</div>
+            <div class="summary-sub mono">{{summary.resourceSizeKB}} KB</div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-label">三方库 / Framework</div>
+            <div class="summary-value">{{summary.frameworkSizeHuman}}</div>
+            <div class="summary-sub mono">{{summary.frameworkSizeKB}} KB</div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-label">优化整体判断</div>
+            <div class="summary-sub">
+              {{summary.overallConclusion}}
+            </div>
+          </div>
+        </div>
+      </aside>
+    </header>
+
+    <main>
+      <!-- 一、总体概览 -->
+      <section>
+        <h2>一、总体概览 <span class="badge">包体积盘点</span></h2>
+        <p>
+          {{section1.overviewParagraph}}
+        </p>
+        <div class="chips">
+          {{section1.chipsHTML}}
+        </div>
+        <p>
+          {{section1.conclusionParagraph}}
+        </p>
+      </section>
+
+      <!-- 二、体积分布与热点模块 -->
+      <section>
+        <h2>二、体积分布与热点模块 <span class="badge">sizeDistribution 概览</span></h2>
+        <p>
+          {{section2.introParagraph}}
+        </p>
+        <div class="list-two-col">
+          {{section2.columnsHTML}}
+        </div>
+        <p class="foot-note">
+          {{section2.footnote}}
+        </p>
+      </section>
+
+      <!-- 三、无用代码与无用资源清理建议 -->
+      <section>
+        <h2>三、无用代码与无用资源清理建议 <span class="badge">unusedCode / unusedResources</span></h2>
+        <p>
+          {{section3.introParagraph}}
+        </p>
+        <div class="checklist">
+          {{section3.checklistHTML}}
+        </div>
+        <p class="foot-note">
+          {{section3.footnote}}
+        </p>
+      </section>
+
+      <!-- 四、Pods 库依赖优化建议 -->
+      <section>
+        <h2>四、Pods 库依赖优化建议 <span class="badge">podsDependencies.mainLibSummary</span></h2>
+        <p>
+          {{section4.introParagraph}}
+        </p>
+        <div class="table-wrapper">
+          {{section4.tableHTML}}
+        </div>
+        <p class="foot-note">
+          {{section4.footnote}}
+        </p>
+      </section>
+
+      <!-- 五、优化路线与优先级规划 -->
+      <section>
+        <h2>五、优化路线与优先级规划 <span class="badge">P0 / P1 / P2</span></h2>
+        <p>
+          {{section5.introParagraph}}
+        </p>
+        <div class="table-wrapper">
+          {{section5.tableHTML}}
+        </div>
+      </section>
+
+      <!-- 六、风险提示与验证建议 -->
+      <section>
+        <h2>六、风险提示与验证建议 <span class="badge">谨慎落地</span></h2>
+        <p>
+          {{section6.introParagraph}}
+        </p>
+        <ul>
+          {{section6.itemsHTML}}
+        </ul>
+        <p class="foot-note">
+          {{section6.footnote}}
+        </p>
+      </section>
+    </main>
+  </div>
+</body>
+</html>
+

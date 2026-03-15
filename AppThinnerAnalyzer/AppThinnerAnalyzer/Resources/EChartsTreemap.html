@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.1/dist/echarts.min.js"></script>
+  <style>
+    /* 统一背景为深色，避免下钻后顶部出现白色空带 */
+    html, body { margin: 0; height: 100%; background: #2b0b0b; }
+    #chart { width: 100%; height: 100%; min-height: 400px; background: #2b0b0b; }
+  </style>
+</head>
+<body>
+  <div id="chart"></div>
+  <!-- 无用占比颜色图例 -->
+  <div id="legend" style="
+    position: fixed; bottom: 8px; right: 10px;
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(20,20,30,0.75); border-radius: 6px;
+    padding: 5px 10px; font-size: 11px; color: #ddd;
+    pointer-events: none; z-index: 999;
+  ">
+    <span style="opacity:0.8;">Unused:</span>
+    <span style="display:inline-flex;align-items:center;gap:3px;">
+      <span style="width:12px;height:12px;border-radius:2px;background:rgb(78,143,168);display:inline-block;"></span>0%
+    </span>
+    <span style="display:inline-flex;align-items:center;gap:3px;">
+      <span style="width:12px;height:12px;border-radius:2px;background:rgb(210,160,50);display:inline-block;"></span>40%
+    </span>
+    <span style="display:inline-flex;align-items:center;gap:3px;">
+      <span style="width:12px;height:12px;border-radius:2px;background:rgb(220,90,30);display:inline-block;"></span>70%
+    </span>
+    <span style="display:inline-flex;align-items:center;gap:3px;">
+      <span style="width:12px;height:12px;border-radius:2px;background:rgb(180,20,20);display:inline-block;"></span>100%
+    </span>
+  </div>
+  <script>
+    (function () {
+      var container = document.getElementById('chart');
+      if (typeof echarts === 'undefined') {
+        container.innerHTML = '<div style="padding:20px;color:#999;text-align:center;">ECharts 加载失败，请检查网络连接</div>';
+        try { window.setTreemapData = function () {}; } catch (e) {}
+        return;
+      }
+
+      var chart = echarts.init(container, null, { renderer: 'canvas' });
+      
+      // 显示加载提示（使用 ECharts 原生 loading）
+      chart.showLoading({
+        text: '等待数据加载...',
+        color: '#999',
+        textColor: '#999',
+        maskColor: 'rgba(255, 255, 255, 0.8)',
+        zlevel: 0
+      });
+
+      function getLevelOption() {
+        return [
+          {
+            itemStyle: {
+              borderWidth: 2,
+              borderColor: '#fff',
+              gapWidth: 2
+            },
+            upperLabel: {
+              show: true,
+              backgroundColor: 'rgba(30, 30, 40, 0.85)',
+              color: '#fff'
+            }
+          },
+          {
+            itemStyle: {
+              borderWidth: 1,
+              borderColor: '#fff',
+              gapWidth: 1
+            }
+          },
+          {
+            itemStyle: {
+              borderWidth: 1,
+              borderColor: '#fff',
+              gapWidth: 1
+            }
+          }
+        ];
+      }
+
+      /**
+       * 根据 unusedRatio（0~1）返回填充色：
+       *   0        → 蓝绿色  #4e8fa8（健康）
+       *   0~0.15   → 蓝绿 → 青绿过渡
+       *   0.15~0.4 → 青绿 → 橙黄过渡（轻度警示）
+       *   0.4~0.7  → 橙黄 → 橙红过渡（中度警示）
+       *   0.7~1    → 橙红 → 深红过渡（高度警示）
+       */
+      function unusedColor(ratio) {
+        if (typeof ratio !== 'number' || isNaN(ratio)) ratio = 0;
+        ratio = Math.max(0, Math.min(1, ratio));
+
+        // 关键色阶（RGB）
+        var stops = [
+          [0.00, [78,  143, 168]],   // #4e8fa8 蓝绿（健康）
+          [0.15, [82,  168, 140]],   // #52a88c 青绿
+          [0.40, [210, 160,  50]],   // #d2a032 橙黄（轻度）
+          [0.70, [220,  90,  30]],   // #dc5a1e 橙红（中度）
+          [1.00, [180,  20,  20]]    // #b41414 深红（高度）
+        ];
+
+        // 找到所在区间并线性插值
+        for (var i = 0; i < stops.length - 1; i++) {
+          var t0 = stops[i][0], c0 = stops[i][1];
+          var t1 = stops[i+1][0], c1 = stops[i+1][1];
+          if (ratio >= t0 && ratio <= t1) {
+            var t = (t1 === t0) ? 0 : (ratio - t0) / (t1 - t0);
+            var r = Math.round(c0[0] + t * (c1[0] - c0[0]));
+            var g = Math.round(c0[1] + t * (c1[1] - c0[1]));
+            var b = Math.round(c0[2] + t * (c1[2] - c0[2]));
+            return 'rgb(' + r + ',' + g + ',' + b + ')';
+          }
+        }
+        return 'rgb(180,20,20)';
+      }
+
+      function deepCloneTree(node) {
+        if (!node || typeof node !== 'object') return { name: 'Unknown', value: 0 };
+        var ratio = typeof node.unusedRatio === 'number' ? node.unusedRatio : 0;
+        var o = {
+          name: node.name || 'Unnamed',
+          itemStyle: { color: unusedColor(ratio) }
+        };
+        if (node.value !== undefined) {
+          o.value = node.value;
+        }
+        if (node.id) {
+          o.id = node.id;
+        }
+        if (typeof node.unusedRatio === 'number') {
+          o.unusedRatio = node.unusedRatio;
+        }
+        if (node.children && node.children.length) {
+          o.children = node.children.map(deepCloneTree);
+        }
+        return o;
+      }
+
+      function formatSize(bytes) {
+        if (bytes === null || bytes === undefined || isNaN(bytes)) return '0 B';
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+        if (bytes < 1024 * 1024 * 1024) return (bytes / 1024 / 1024).toFixed(2) + ' MB';
+        return (bytes / 1024 / 1024 / 1024).toFixed(2) + ' GB';
+      }
+
+      function setTreemapData(dataJson) {
+        try {
+          // 隐藏 loading 效果
+          chart.hideLoading();
+          
+          var data = typeof dataJson === 'string' ? JSON.parse(dataJson) : dataJson;
+          
+          if (!data) {
+            chart.showLoading({
+              text: '暂无数据',
+              color: '#999',
+              textColor: '#999',
+              maskColor: 'rgba(255, 255, 255, 0.8'
+            });
+            return;
+          }
+          
+          var treeData = Array.isArray(data) ? data[0] : data;
+          
+          if (!treeData || typeof treeData !== 'object') {
+            chart.showLoading({
+              text: '数据格式错误',
+              color: '#c00',
+              textColor: '#c00',
+              maskColor: 'rgba(255, 255, 255, 0.8'
+            });
+            return;
+          }
+          
+          var mutableData = deepCloneTree(treeData);
+
+          var option = {
+            // 统一 treemap 画布背景色，避免顶部出现白色空带
+            backgroundColor: '#2b0b0b',
+            tooltip: {
+              trigger: 'item',
+              formatter: function (info) {
+                var value = info.value;
+                var sizeValue = Array.isArray(value) ? value[0] : value;
+                var unused = Array.isArray(value) ? value[1] : (info.data && typeof info.data.unusedRatio === 'number' ? info.data.unusedRatio : null);
+                var treePathInfo = info.treePathInfo || [];
+                var treePath = [];
+                for (var i = 1; i < treePathInfo.length; i++) {
+                  treePath.push(treePathInfo[i].name);
+                }
+                var pathStr = treePath.length ? treePath.join(' / ') : (info.name || '');
+                var sizeStr = formatSize(sizeValue);
+                var unusedStr = (unused !== null && unused !== undefined)
+                  ? ('Unused: ' + (unused * 100).toFixed(1) + '%')
+                  : '';
+                return '<div style="padding:4px;">' +
+                       '<div style="font-weight:bold;margin-bottom:4px;">' + (info.name || '') + '</div>' +
+                       '<div style="color:#666;">' + sizeStr + '</div>' +
+                       (unusedStr ? '<div style="color:#c00;font-size:12px;margin-top:2px;">' + unusedStr + '</div>' : '') +
+                       (pathStr && pathStr !== info.name ? '<div style="color:#999;font-size:12px;margin-top:4px;">' + pathStr + '</div>' : '') +
+                       '</div>';
+              }
+            },
+            series: [{
+              name: 'Root',
+              type: 'treemap',
+              width: '100%',
+              height: '100%',
+              top: 0,
+              bottom: 0,
+              roam: false,
+              nodeClick: 'zoomToNode',
+              drillDownIcon: '▶',
+              leafDepth: 3,
+              breadcrumb: {
+                show: true,
+                height: 20,
+                itemStyle: {
+                  textStyle: {
+                    color: '#fff',
+                    fontWeight: 'bold'
+                  }
+                }
+              },
+              label: {
+                show: true,
+                formatter: function(params) {
+                  var ratio = params.data && typeof params.data.unusedRatio === 'number'
+                    ? params.data.unusedRatio : 0;
+                  if (ratio > 0.05) {
+                    return params.name + '\n⚠ ' + (ratio * 100).toFixed(0) + '%';
+                  }
+                  return params.name;
+                },
+                fontSize: 12,
+                fontWeight: 'bold',
+                padding: [3, 6, 3, 6],
+                backgroundColor: 'rgba(0,0,0,0.3)',
+                borderRadius: 3,
+                color: '#fff'
+              },
+              upperLabel: {
+                show: true,
+                height: 28,
+                color: '#fff',
+                fontSize: 14,
+                fontWeight: 'bold',
+                padding: [4, 8, 4, 8],
+                // 明确设置父目录标题栏背景色，避免继承到浅色或白色
+                backgroundColor: 'rgba(30, 30, 40, 0.85)'
+              },
+              itemStyle: {
+                borderColor: '#fff',
+                borderWidth: 2,
+                gapWidth: 2
+              },
+              levels: getLevelOption(),
+              data: mutableData.children && mutableData.children.length > 0 ? mutableData.children : [mutableData]
+            }]
+          };
+          
+          chart.setOption(option, true);
+          chart.resize();
+          
+          setTimeout(function () { 
+            if (chart) chart.resize(); 
+          }, 100);
+
+          // 发送节点 id 给 Swift
+          function postNodeId(id) {
+            try {
+              if (window.webkit &&
+                  window.webkit.messageHandlers &&
+                  window.webkit.messageHandlers.treemapNodeSelected) {
+                window.webkit.messageHandlers.treemapNodeSelected.postMessage(String(id));
+              }
+            } catch (e) {
+              console.warn('treemapNodeSelected postMessage failed:', e);
+            }
+          }
+
+          chart.off('click');
+          chart.on('click', function (params) {
+            if (!params || !params.data) return;
+            var id = params.data.id;
+            if (!id) return;
+
+            var hasChildren = params.data.children && params.data.children.length > 0;
+            if (!hasChildren) {
+              // 叶子节点：直接通知 Swift
+              postNodeId(id);
+              return;
+            }
+
+            // 目录节点：等 ECharts 下钻动画完成后（450ms）再通知 Swift，避免 SwiftUI
+            // 重渲染与 ECharts 动画竞争导致下钻状态被重置。
+            var clickedId = id;
+            setTimeout(function () {
+              postNodeId(clickedId);
+            }, 450);
+          });
+
+          // 面包屑点击（上钻）：ECharts 内部通过 treemapzoom 触发，
+          // 同样等动画完成后再通知。
+          chart.off('treemapzoom');
+          chart.on('treemapzoom', function (params) {
+            if (!params) return;
+            // treemapzoom 在面包屑回退时触发；treePathInfo 末项为回退后的当前节点
+            var id = null;
+            var pathInfo = params.treePathInfo;
+            if (pathInfo && pathInfo.length > 0) {
+              var last = pathInfo[pathInfo.length - 1];
+              if (last && last.data && last.data.id) {
+                id = last.data.id;
+              }
+            }
+            if (!id) return;
+            // 延迟等动画完成再通知
+            var zoomedId = id;
+            setTimeout(function () {
+              postNodeId(zoomedId);
+            }, 450);
+          });
+          
+        } catch (e) {
+          console.error('Treemap render error:', e);
+          container.innerHTML = '<div style="padding:20px;color:#c00;">渲染失败: ' + (e.message || String(e)) + '</div>';
+        }
+      }
+
+      // 暴露接口给 Swift
+      try {
+        window.setTreemapData = setTreemapData;
+      } catch (e) {
+        Object.defineProperty(window, 'setTreemapData', { 
+          value: setTreemapData, 
+          writable: true, 
+          configurable: true 
+        });
+      }
+      
+      // 响应窗口大小变化
+      window.addEventListener('resize', function () { 
+        if (chart) {
+          chart.resize();
+        }
+      });
+      
+    })();
+  </script>
+</body>
+</html>

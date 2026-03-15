@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+  <style>
+    html, body { margin: 0; height: 100%; }
+    #chart { width: 100%; height: 100%; }
+  </style>
+</head>
+<body>
+  <div id="chart"></div>
+  <script>
+    var chart = echarts.init(document.getElementById('chart'));
+
+    function formatSize(bytes) {
+      if (bytes === null || bytes === undefined || isNaN(bytes)) return '0 B';
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+      if (bytes < 1024 * 1024 * 1024) return (bytes / 1024 / 1024).toFixed(2) + ' MB';
+      return (bytes / 1024 / 1024 / 1024).toFixed(2) + ' GB';
+    }
+
+    function setGraphData(payloadJson) {
+      var payload = typeof payloadJson === 'string' ? JSON.parse(payloadJson) : payloadJson;
+      var nodes = payload.nodes || [];
+      var links = payload.links || [];
+      var option = {
+        tooltip: { 
+          formatter: function(params) { 
+            var d = params.data || {};
+            var name = (d.name || params.name || '').replace(/\n/g, ' ');
+            var size = d.size;
+            var sizeStr = size != null ? formatSize(size) : 'Unknown size';
+            var unused = d.unusedRatio;
+            var unusedStr = (typeof unused === 'number') ? (unused * 100).toFixed(1) + '%' : '—';
+            return '<div style=\"padding:4px;\">' +
+                   '<div style=\"font-weight:bold;margin-bottom:4px;\">' + name + '</div>' +
+                   '<div style=\"color:#666;font-size:12px;\">Size: ' + sizeStr + '</div>' +
+                   '<div style=\"color:#c00;font-size:12px;\">Unused: ' + unusedStr + '</div>' +
+                   '</div>';
+          } 
+        },
+        series: [{
+          type: 'graph',
+          layout: 'force',
+          roam: true,
+          draggable: true,
+          label: { show: true, position: 'right' },
+          // 节点颜色：默认蓝色；存在无用占比时按 unusedRatio 从橙色过渡到红色
+          itemStyle: {
+            color: function (params) {
+              var d = params.data || {};
+              var u = typeof d.unusedRatio === 'number' ? Math.max(0, Math.min(1, d.unusedRatio)) : 0;
+              // 无无用占比：统一蓝色
+              if (u <= 0) {
+                return '#3b82f6'; // 默认蓝
+              }
+              // 从橙色 (#f59e0b) 渐变到红色 (#ef4444)
+              var start = [245, 158, 11];
+              var end = [239, 68, 68];
+              var r = u;
+              var c = [
+                Math.round(start[0] + (end[0] - start[0]) * r),
+                Math.round(start[1] + (end[1] - start[1]) * r),
+                Math.round(start[2] + (end[2] - start[2]) * r)
+              ];
+              return 'rgb(' + c.join(',') + ')';
+            }
+          },
+          edgeLabel: { show: false },
+          edgeSymbol: ['none', 'arrow'],
+          edgeSymbolSize: 8,
+          force: {
+            repulsion: 200,
+            edgeLength: [100, 220],
+            layoutAnimation: true,
+            gravity: 0.1
+          },
+          data: nodes,
+          links: links,
+          lineStyle: { opacity: 0.8, width: 1.5, curveness: 0.2, color: '#999' }
+        }]
+      };
+      chart.setOption(option, true);
+    }
+    window.setGraphData = setGraphData;
+    window.onresize = function() { chart.resize(); };
+  </script>
+</body>
+</html>

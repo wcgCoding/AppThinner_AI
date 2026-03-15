@@ -1,0 +1,128 @@
+# iOS Unused Code Scanner - Agent Skill 标准结构
+
+## 📁 目录结构
+
+```
+ios_unused_code_scanner/
+├── SKILL.md                          # ✅ 主技能文件（必需）
+│   ├── YAML frontmatter (name + description)
+│   └── Markdown 使用说明
+│
+├── scripts/                          # ✅ 可执行脚本和代码
+│   ├── scanner.py                    # 核心扫描器
+│   ├── api.py                        # API 接口
+│   ├── install.sh                    # 安装脚本
+│   ├── run_scan.sh                   # 运行脚本
+│   ├── test.sh                       # 测试脚本
+│   ├── basic_usage.py                # 基础使用示例
+│   ├── ci_integration.py             # CI/CD 集成示例
+│   └── custom_config.py              # 自定义配置示例
+│
+├── references/                       # ✅ 参考文档（按需加载）
+│   ├── api.md                        # API 完整文档
+│   ├── integration.md                # 集成指南
+│   └── best_practices.md             # 最佳实践
+│
+├── assets/                           # ✅ 配置文件和模板
+│   └── default.json                  # 默认配置文件
+│
+├── tests/                            # ✅ 测试文件
+│   ├── test_scanner.py               # 单元测试
+│   └── test_data/                    # 测试数据
+│       ├── README.md
+│       ├── TestClass.h
+│       ├── TestClass.m
+│       └── TestViewController.swift
+│
+└── requirements.txt                  # ✅ Python 依赖
+
+```
+
+## 📋 符合 Agent Skill 规范
+
+### ✅ 必需组件
+- [x] SKILL.md - 主技能文件
+- [x] YAML frontmatter (仅 name + description)
+- [x] Markdown 使用说明
+
+### ✅ 可选组件
+- [x] scripts/ - 可执行脚本
+- [x] references/ - 参考文档
+- [x] assets/ - 配置和模板
+- [x] tests/ - 测试文件
+
+### ✅ 已移除的不规范文件
+- [x] ~~skill.json~~ (已删除)
+- [x] ~~skill_manifest.yaml~~ (已删除)
+- [x] ~~README.md~~ (已删除)
+- [x] ~~DEPLOYMENT.md~~ (已删除)
+- [x] ~~COMPLETION_REPORT.md~~ (已删除)
+
+### ✅ 目录重组
+- [x] docs/ → references/ (参考文档)
+- [x] configs/ → assets/ (配置文件)
+- [x] src/ → scripts/ (源代码)
+- [x] examples/ → scripts/ (示例代码)
+
+## 🎯 使用说明
+
+### 快速开始
+
+```bash
+# 1. 安装依赖
+pip3 install -r requirements.txt
+
+# 2. 运行扫描
+./scripts/run_scan.sh --project /path/to/ios/project
+
+# 3. 查看报告
+open unused_scan_results/report.html
+```
+
+### Python API
+
+```python
+from scripts.scanner import iOSUnusedScanner
+
+scanner = iOSUnusedScanner(project_root='.')
+results = scanner.scan()
+scanner.generate_reports()
+```
+
+### 参考文档
+
+需要详细信息时，使用 `read_file` 工具查看：
+- `references/api.md` - 完整 API 文档
+- `references/integration.md` - CI/CD 集成
+- `references/best_practices.md` - 最佳实践
+
+### 配置文件
+
+编辑 `assets/default.json` 自定义扫描行为：
+- 忽略规则
+- 白名单配置
+- 扫描选项
+
+## 📊 规范对比
+
+| 项目 | 修复前 | 修复后 | 状态 |
+|------|--------|--------|------|
+| SKILL.md frontmatter | 15+ 字段 | 2 字段 (name + description) | ✅ |
+| 配置文件 | skill.json + skill_manifest.yaml | 仅 SKILL.md | ✅ |
+| 文档文件 | README.md + DEPLOYMENT.md + ... | 仅 SKILL.md | ✅ |
+| 目录结构 | docs/, configs/, src/, examples/ | references/, assets/, scripts/ | ✅ |
+| 路径引用 | src/, docs/, configs/, examples/ | scripts/, references/, assets/ | ✅ |
+
+## ✨ 优化亮点
+
+1. **简化配置** - 移除冗余的 JSON/YAML 配置文件
+2. **标准化目录** - 使用 references/, assets/, scripts/ 标准目录
+3. **清理文档** - 移除不必要的 README 等辅助文档
+4. **统一路径** - 所有路径引用更新为新的目录结构
+5. **保持功能** - 所有原有功能完整保留
+
+---
+
+**状态**: ✅ 完全符合 Agent Skill 规范
+**版本**: 1.0.0 (规范化)
+**最后更新**: 2026-01-25

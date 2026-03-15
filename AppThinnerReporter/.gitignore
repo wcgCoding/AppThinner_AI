@@ -1,0 +1,15 @@
+# Xcode
+build/
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.xcuserstate
+xcuserdata/
+DerivedData/
+
+# Pods
+Pods/
+*.xcworkspace
+
+# macOS
+.DS_Store

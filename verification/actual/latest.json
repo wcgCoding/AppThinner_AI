@@ -1,0 +1,7 @@
+{
+  "totalSize": 0,
+  "summaryCodeSize": 0,
+  "summaryResourceSize": 0,
+  "summaryFrameworkSize": 0,
+  "_comment": "将一次正确分析导出的 JSON 中对应字段复制到此，或保留 0 仅做格式占位；compare_analysis.swift 会按容差对比 actual 与本文件"
+}

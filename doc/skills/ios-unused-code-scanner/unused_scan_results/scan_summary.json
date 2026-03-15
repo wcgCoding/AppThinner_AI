@@ -1,0 +1,21 @@
+{
+  "scan_time": "2026-02-01T15:27:30.798719",
+  "project_path": "/Users/wuzhaogang/JOOX_iOS",
+  "total_unused_items": 15462,
+  "unused_classes": 390,
+  "unused_methods": 0,
+  "unused_properties": 14585,
+  "unused_files": 484,
+  "unused_images": 0,
+  "unused_xibs": 3,
+  "unused_storyboards": 0,
+  "scan_stats": {
+    "total_files_scanned": 12696,
+    "total_classes_found": 5681,
+    "total_methods_found": 25093,
+    "total_resources_found": 4279,
+    "scan_start_time": "2026-02-01T15:27:26.799931",
+    "scan_end_time": "2026-02-01T15:27:30.766707",
+    "scan_duration": 3.966776
+  }
+}

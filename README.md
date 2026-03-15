@@ -1,0 +1,2 @@
+# AppThinner_AI
+由AI编写一个iOS包体积本地分析及裁剪工具
