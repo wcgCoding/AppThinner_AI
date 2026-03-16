@@ -16,6 +16,10 @@ enum AIExportService {
         let sizeDistribution: SizeDistributionNode
         let unusedCode: [UnusedCodeEntry]
         let unusedResources: [UnusedResourceEntry]
+        /// 无用代码总条数（若已截断则为全量条数，便于报告注明「共 N 条，仅展示 Top 500」）
+        let totalUnusedCodeCount: Int
+        /// 无用资源总条数（若已截断则为全量条数）
+        let totalUnusedResourcesCount: Int
         let podsDependencies: PodsDependenciesSummary?
     }
 
@@ -136,12 +140,21 @@ enum AIExportService {
                 .sorted()
         }
 
-        func buildNode(path: String, name: String) -> SizeDistributionNode {
+        /// 最多导出到第 5 层（root 为第 1 层），不展开到叶子/符号。
+        let maxDepth = 5
+        func buildNode(path: String, name: String, depth: Int) -> SizeDistributionNode {
             let agg = pathAggregates[path] ?? (0, 0, 0, 0)
             let total = agg.0 + agg.1 + agg.2
             let unusedRatio = total > 0 ? Double(agg.3) / Double(total) : 0
-            let children = directChildPaths(of: path).map { childPath in
-                buildNode(path: childPath, name: (childPath as NSString).lastPathComponent)
+            let children: [SizeDistributionNode]
+            if depth >= maxDepth {
+                children = []
+            } else {
+                children = directChildPaths(of: path)
+                    .map { childPath in
+                        buildNode(path: childPath, name: (childPath as NSString).lastPathComponent, depth: depth + 1)
+                    }
+                    .sorted { $0.totalSizeBytes > $1.totalSizeBytes }
             }
             return SizeDistributionNode(
                 name: name,
@@ -152,14 +165,14 @@ enum AIExportService {
                 frameworkSizeBytes: agg.2,
                 unusedSizeBytes: agg.3,
                 unusedRatio: unusedRatio,
-                children: children.sorted { $0.totalSizeBytes > $1.totalSizeBytes }
+                children: children
             )
         }
 
         let topLevel = pathAggregates.keys
             .filter { !$0.contains(pathSeparator) }
             .sorted()
-        let rootChildren = topLevel.map { buildNode(path: $0, name: $0) }
+        let rootChildren = topLevel.map { buildNode(path: $0, name: $0, depth: 1) }
         let rootTotal = rootChildren.reduce(0) { $0 + $1.totalSizeBytes }
         let rootUnused = rootChildren.reduce(0) { $0 + $1.unusedSizeBytes }
         let rootRatio = rootTotal > 0 ? Double(rootUnused) / Double(rootTotal) : 0
@@ -175,8 +188,13 @@ enum AIExportService {
             children: rootChildren
         )
 
-        let unusedCode = results
-            .filter { $0.isUnusedCode && $0.codeSize > 0 }
+        /// 只导出按体积排序的 Top 500 条，控制 Token 与文件体积。
+        let unusedCodeLimit = 500
+        let allUnusedCode = results.filter { $0.isUnusedCode && $0.codeSize > 0 }
+        let totalUnusedCodeCount = allUnusedCode.count
+        let unusedCode = allUnusedCode
+            .sorted { $0.codeSize > $1.codeSize }
+            .prefix(unusedCodeLimit)
             .map { r in
                 UnusedCodeEntry(
                     relativePath: r.relativePath,
@@ -185,8 +203,12 @@ enum AIExportService {
                     codeSizeKB: Double(r.codeSize) / 1024.0
                 )
             }
-        let unusedResources = results
-            .filter { $0.isUnusedResource && $0.resourceSize > 0 }
+        let unusedResourceLimit = 500
+        let allUnusedResources = results.filter { $0.isUnusedResource && $0.resourceSize > 0 }
+        let totalUnusedResourcesCount = allUnusedResources.count
+        let unusedResources = allUnusedResources
+            .sorted { $0.resourceSize > $1.resourceSize }
+            .prefix(unusedResourceLimit)
             .map { r in
                 UnusedResourceEntry(
                     relativePath: r.relativePath,
@@ -240,13 +262,15 @@ enum AIExportService {
                 potentialSavingsKB: Double(potentialSavings) / 1024.0
             ),
             sizeDistribution: sizeDistribution,
-            unusedCode: unusedCode,
-            unusedResources: unusedResources,
+            unusedCode: Array(unusedCode),
+            unusedResources: Array(unusedResources),
+            totalUnusedCodeCount: totalUnusedCodeCount,
+            totalUnusedResourcesCount: totalUnusedResourcesCount,
             podsDependencies: podsDependencies
         )
 
         let encoder = JSONEncoder()
-        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        encoder.outputFormatting = [.sortedKeys]
         return try encoder.encode(payload)
     }
 }

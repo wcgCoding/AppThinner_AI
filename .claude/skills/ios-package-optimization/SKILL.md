@@ -21,14 +21,34 @@ description: 基于 AppThinner 导出的 JSON 分析结果，生成标准化的 
   - 或项目内的相对路径（由上层调用方转换为绝对路径）
 - 调用时不要直接粘贴 JSON 内容，而是提供「已经导出的 JSON 文件路径」。
 
+#### 可选输入：拟下架业务（businessToSunset）
+
+- 若在分析前已确定拟下架的业务模块（如直播、歌房、录唱、短视频），可**额外提供**拟下架业务配置，报告中将自动增加「拟下架业务与可清理范围」章节。
+- 配置形式示例（由调用方在对话或上下文中给出）：
+  - 业务名称列表：`["直播", "歌房", "录唱", "短视频"]`
+  - 或带关键词映射：`{ "直播": ["LiveVideo", "NewLive", "IMLive"], "歌房": ["KTV", "WSKTVRoom", "RoomModule"], "录唱": ["KSong", "Buzz", "Reconmend", "WeSing"], "短视频": ["ShortVideo", "TAVEffectKit", "TAVKit"] }`
+- 若未提供，则报告不包含该章节；若只提供业务名列表，则使用下方「业务名 → 路径关键词」默认映射表进行匹配。
+
 ### 2. 文件内容规范
 
-文件内容应当是由 AppThinner 中「Treemap 可视化 → 导出 AI 报告数据」功能生成的 JSON，形如（字段简化示例）：
+文件内容应当是由 AppThinner 中「Treemap 可视化 → 导出 AI 报告数据」功能生成的 JSON。导出前会做**压缩**（minify），即无换行、无多余空格的单行 JSON，解析时按标准 JSON 处理即可。
+
+**最新导出规则（与 AppThinner AIExportService 一致）**：
+
+| 区块 | 规则 |
+|------|------|
+| **sizeDistribution** | 最多只导出到**第 5 层**（Root 为第 1 层），不展开到叶子/符号；第 5 层节点的 `children` 为空数组。 |
+| **unusedCode** | 仅导出按 **codeSizeBytes 降序**的 **Top 500** 条，用于控制 Token 与文件体积。 |
+| **unusedResources** | 仅导出按 **resourceSizeBytes 降序**的 **Top 500** 条。 |
+| **podsDependencies** | **mainLibSummary** 与 **tree** 均**完整导出**，不做截断。 |
+
+顶层结构形如（字段简化示例）：
 
 ```jsonc
 {
   "version": "1.0",
   "exportedAt": "2026-03-11T12:34:56Z",
+  "instructionsForAI": "String",
   "project": {
     "name": "String",
     "projectPath": "String",
@@ -52,58 +72,41 @@ description: 基于 AppThinner 导出的 JSON 分析结果，生成标准化的 
     "unusedSizeBytes": 0,
     "unusedRatio": 0.0,
     "children": [
-      /* 递归同结构，relativePath 为业务目录，如 "Modules/Pay", "Features/Live" */
+      /* 递归同结构，最多 5 层；第 5 层 children 为 [] */
     ]
   },
   "unusedCode": [
-    {
-      "relativePath": "String",
-      "fileName": "String",
-      "codeSizeBytes": 0,
-      "codeSizeKB": 0.0
-    }
+    { "relativePath": "String", "fileName": "String", "codeSizeBytes": 0, "codeSizeKB": 0.0 }
   ],
   "unusedResources": [
-    {
-      "relativePath": "String",
-      "fileName": "String",
-      "resourceSizeBytes": 0,
-      "resourceSizeKB": 0.0
-    }
+    { "relativePath": "String", "fileName": "String", "resourceSizeBytes": 0, "resourceSizeKB": 0.0 }
   ],
+  "totalUnusedCodeCount": 0,
+  "totalUnusedResourcesCount": 0,
   "podsDependencies": {
     "podfileLockPath": "Podfile.lock",
     "mainLibSummary": [
-      {
-        "name": "AFNetworking",
-        "version": "4.0.1",
-        "sizeBytes": 0,
-        "sizeKB": 0.0,
-        "unusedSizeBytes": 0,
-        "unusedSizeKB": 0.0,
-        "unusedRatio": 0.0,
-        "dependedByCount": 0,
-        "dependedByList": ["MainApp"]
-      }
+      { "name": "AFNetworking", "version": "4.0.1", "sizeBytes": 0, "sizeKB": 0.0, "unusedSizeBytes": 0, "unusedSizeKB": 0.0, "unusedRatio": 0.0, "dependedByCount": 0, "dependedByList": ["MainApp"] }
     ],
-    "tree": [
-      /* PodsDependencyInfo 数组，原始依赖树，仅作结构参考 */
-    ]
+    "tree": [ /* PodsDependencyInfo 数组，完整依赖树 */ ]
   }
 }
 ```
+
+- **totalUnusedCodeCount** / **totalUnusedResourcesCount**：全量无用代码/资源条数。若大于 `unusedCode.length` / `unusedResources.length`，表示已按体积截断，报告中应注明「共 N 条，此处仅展示体积 Top 500」。
 
 ### 3. 输入校验要求
 
 Skill 应在读取文件后进行以下校验：
 
 1. 路径是否存在、是否为普通文件；不存在时返回明确错误提示，不继续解析。
-2. 是否能够成功解析为 JSON；失败时返回「不是合法 JSON」的错误说明。
+2. 是否能够成功解析为 JSON；**导出的 JSON 可能为压缩单行**，解析逻辑与美化 JSON 一致；失败时返回「不是合法 JSON」的错误说明。
 3. 顶层是否包含以下关键字段：
    - `version`（期望 `"1.0"`，其他版本需要在报告中标注兼容性提示）
    - `project`
    - `sizeDistribution`
 4. 如 `unusedCode` / `unusedResources` / `podsDependencies` 缺失或为空，应被视为「该能力未开启或无结果」，不能简单当作 0。
+5. 若存在 **totalUnusedCodeCount** / **totalUnusedResourcesCount** 且大于对应数组长度，表示无用代码/资源已按体积截断为 Top 500，报告中应在「无用代码与无用资源」章节明确写出「共 N 条无用代码，此处仅展示体积 Top 500」（资源同理），避免读者误以为仅有 500 条。
 
 在发现数据明显异常时（例如 `totalSizeBytes` 极小、`sizeDistribution.children` 为空），需要在最终 HTML 报告的「风险提示」章节中明确指出「输入数据可能不完整或未开启相应分析」，避免误导。
 
@@ -155,6 +158,10 @@ HTML 结构建议如下（可以在实现时按此骨架组织）：
   <h2>三、无用代码与无用资源清理建议</h2>
   <!-- 按业务目录聚合 unusedCode / unusedResources，生成分组表格 + checklist -->
 
+  <!-- 可选：当提供 businessToSunset 时插入 -->
+  <h2>拟下架业务与可清理范围</h2>
+  <!-- 按路径关键词匹配，汇总每类业务的无用代码条数/体积、无用资源条数/体积及建议 -->
+
   <h2>四、Pods 库依赖优化建议</h2>
   <!-- 基于 podsDependencies.mainLibSummary，分析体积大户、高无用占比 Pods 及被依赖情况 -->
 
@@ -198,9 +205,12 @@ HTML 结构建议如下（可以在实现时按此骨架组织）：
 
 ## 三、分析逻辑（建议实现思路）
 
+与当前导出规则对应：**sizeDistribution** 已最多 5 层、**unusedCode** / **unusedResources** 已为体积 Top 500、**podsDependencies** 为完整导出。生成报告时按上述范围解读即可，并在存在截断时注明总条数。
+
 ### 1. 体积分布分析（sizeDistribution）
 
-- 从 `sizeDistribution.children` 中选取 **Top N 业务目录**（例如 5–10 个，按 `totalSizeBytes` 降序）。
+- 导出规则下 **sizeDistribution 已最多 5 层**，不再展开到叶子/符号；直接遍历现有树即可，无需再做深度截断。
+- 从 `sizeDistribution.children` 中选取 **Top N 业务目录**（例如 5–10 个，按 `totalSizeBytes` 降序）；若某层 `children` 已按体积排序则可直接取前 N 个。
 - 对每个目录输出：
   - `relativePath`（例如 `Modules/Pay`, `Features/Live`, `Pods/AFNetworking`）
   - 总体积及 Code / Resource / Framework 构成占比；
@@ -211,7 +221,8 @@ HTML 结构建议如下（可以在实现时按此骨架组织）：
 
 ### 2. 无用代码与资源（unusedCode / unusedResources）
 
-- 按 `relativePath` 的上层目录（如前两级路径）对无用项进行聚合：
+- **截断说明**：导出规则下 **unusedCode** / **unusedResources** 仅包含按体积排序的 **Top 500**。若存在 **totalUnusedCodeCount** / **totalUnusedResourcesCount** 且大于 500，在报告中该章节开头明确写出：「共 N 条无用代码，此处仅展示体积 Top 500」/「共 M 条无用资源，此处仅展示体积 Top 500」，避免误导。
+- 按 `relativePath` 的上层目录（如前两级路径）对**当前数组内**无用项进行聚合：
   - 例如：`Modules/Pay/XXX.swift` → 归到 `Modules/Pay`；
   - `Resources/Images/xxx.png` → 归到 `Resources/Images`。
 - 对每个目录统计：
@@ -235,7 +246,32 @@ HTML 结构建议如下（可以在实现时按此骨架组织）：
 - Skill 在生成 HTML 报告时，可以在「无用代码与无用资源清理建议」章节中明确提示：
   - 如「建议搭配 AppThinner 中的『导出无用代码 & 资源 CSV』功能，获取完整清单并导入 Excel / BI 工具做进一步筛选与跟踪」。
 
-### 3. Pods 依赖优化（podsDependencies）
+### 3. 拟下架业务与路径关键词匹配（可选）
+
+当调用方提供了 **拟下架业务**（businessToSunset）时：
+
+- **匹配规则**：
+  - **无用代码/无用资源**：对 JSON 中 `unusedCode[].relativePath`、`unusedResources[].relativePath` 做**不区分大小写**的子串匹配；若路径中包含该业务任一关键词，则将该条计入该业务（用于表格中的「无用代码」「无用资源」列，仅统计导出 Top 500）。
+  - **路径是否 Pods**：`relativePath` 以 `Pods/` 开头或包含 `/Pods/` 视为 Pods 三方库，否则视为端上源码。
+  - **可节约（约）**：仅统计**端上源码**（排除 Pods）。从 **sizeDistribution** 树递归遍历：若某节点 `relativePath` 包含该业务任一关键词且**非 Pods 路径**，则计入该节点的 `totalSizeBytes`，且不再递归其子节点；否则递归子节点。**疑似关联 Pods**：同上逻辑但仅统计 **Pods 路径**，放入展开明细供参考（评估依赖下线时的额外收益）。
+- **业务名 → 路径关键词**默认映射表（可根据工程实际目录调整）：
+
+| 业务名 | 路径关键词（任一词匹配即计入） |
+|--------|--------------------------------|
+| 直播   | LiveVideo, NewLive, IMLive     |
+| 歌房   | KTV, WSKTVRoom, RoomModule     |
+| 录唱   | KSong, Buzz, Reconmend, WeSing |
+| 短视频 | ShortVideo, TAVEffectKit, TAVKit |
+
+- **统计输出**：对每个业务汇总：
+  - 无用代码：条数、总 codeSizeBytes（或 KB/MB），来自 unusedCode 按关键词匹配；
+  - 无用资源：条数、总 resourceSizeBytes（或 KB/MB），来自 unusedResources 按关键词匹配；
+  - **可节约（约）**：该业务路径关键词在 sizeDistribution 中匹配到的**端上源码目录总体积**（排除 Pods）；
+  - **展开明细**：按关键词列出「端上源码」与「疑似关联 Pods（供参考）」两列，并给出端上合计与 Pods 合计；
+  - 建议：一句简短落地建议（可提及端上移除与 Pods 评估下线）。
+- 报告中该章节需注明：可节约仅统计端上源码（排除 Pods）；Pods 内匹配关键字的目录体积见展开明细，供评估依赖下线时参考。
+
+### 4. Pods 依赖优化（podsDependencies）
 
 当 `podsDependencies` 存在时：
 
@@ -247,7 +283,7 @@ HTML 结构建议如下（可以在实现时按此骨架组织）：
   - 可考虑下线/替换的 Pods 列表；
   - 建议治理方式：例如按子模块拆分、替换为更轻量实现、与业务确认后下线等。
 
-### 4. 优先级与路线图
+### 5. 优先级与路线图
 
 - 将所有建议拆分为：
   - **P0：短期可落地（1–2 个版本内）**；
