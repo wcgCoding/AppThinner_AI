@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		23271E4B2F655F3E00CDCED3 /* MachOUnusedSymbolAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C113 /* MachOUnusedSymbolAnalyzer.swift */; };
 		23271E592F65817D00CDCED3 /* OptimizationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23271E582F65817D00CDCED3 /* OptimizationService.swift */; };
 		23271E5B2F6581B800CDCED3 /* DataIntegrationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23271E5A2F6581B800CDCED3 /* DataIntegrationService.swift */; };
 		23271E5D2F65886E00CDCED3 /* AssetsCatalogParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23271E5C2F65886E00CDCED3 /* AssetsCatalogParser.swift */; };
@@ -15,6 +14,10 @@
 		233B18B92F5C65960006BF72 /* MachOObjCSection in Frameworks */ = {isa = PBXBuildFile; productRef = 233B18B82F5C65960006BF72 /* MachOObjCSection */; };
 		233B18BD2F5DA9570006BF72 /* XcodeProj in Frameworks */ = {isa = PBXBuildFile; productRef = 233B18BC2F5DA9570006BF72 /* XcodeProj */; };
 		233B18C12F5B20430006BF72 /* UnusedSymbolMappingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 233B18C02F5B20430006BF72 /* UnusedSymbolMappingService.swift */; };
+		23B50A622F67F9D600893E3A /* MachOUnusedSymbolAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23B50A5F2F67F9D600893E3A /* MachOUnusedSymbolAnalyzer.swift */; };
+		23B50A632F67F9D600893E3A /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23B50A602F67F9D600893E3A /* main.swift */; };
+		23B50A6E2F696FA000893E3A /* ATCompressionHelper.m in Sources */ = {isa = PBXBuildFile; fileRef = 23B50A6D2F696FA000893E3A /* ATCompressionHelper.m */; };
+		23B50A712F696FB900893E3A /* ATReportDataParser.m in Sources */ = {isa = PBXBuildFile; fileRef = 23B50A702F696FB900893E3A /* ATReportDataParser.m */; };
 		23BCE2D42F475240000696F4 /* PathMappingResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23BCE2BF2F475240000696F4 /* PathMappingResolver.swift */; };
 		23BCE2D52F475240000696F4 /* DataModel.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 23BCE2AE2F475240000696F4 /* DataModel.xcdatamodeld */; };
 		23BCE2D62F475240000696F4 /* AnalysisResult+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23BCE2AC2F475240000696F4 /* AnalysisResult+CoreDataProperties.swift */; };
@@ -69,7 +72,6 @@
 		A10019 /* AppThinnerAnalyzerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10020 /* AppThinnerAnalyzerTests.swift */; };
 		A1C003 /* CoreUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A1C002 /* CoreUI.framework */; };
 		A1C004 /* CARParser.m in Sources */ = {isa = PBXBuildFile; fileRef = A1C001 /* CARParser.m */; };
-		A1C101 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C100 /* main.swift */; };
 		A1C102 /* DataModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23BCE2B22F475240000696F4 /* DataModels.swift */; };
 		A1C103 /* LinkmapAnalyzer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23BCE2BD2F475240000696F4 /* LinkmapAnalyzer.swift */; };
 		A1C104 /* LinkmapPathFallbackResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23BCE3A02F476300000696F4 /* LinkmapPathFallbackResolver.swift */; };
@@ -97,6 +99,12 @@
 		23271E5C2F65886E00CDCED3 /* AssetsCatalogParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssetsCatalogParser.swift; sourceTree = "<group>"; };
 		233B18AF2F5B20410006BF72 /* BinaryUnusedCodeAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BinaryUnusedCodeAnalyzer.swift; sourceTree = "<group>"; };
 		233B18C02F5B20430006BF72 /* UnusedSymbolMappingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnusedSymbolMappingService.swift; sourceTree = "<group>"; };
+		23B50A5F2F67F9D600893E3A /* MachOUnusedSymbolAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MachOUnusedSymbolAnalyzer.swift; sourceTree = "<group>"; };
+		23B50A602F67F9D600893E3A /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		23B50A6C2F696FA000893E3A /* ATCompressionHelper.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ATCompressionHelper.h; path = ../AppThinnerReporter/AppThinnerReporter/Classes/ATCompressionHelper.h; sourceTree = SOURCE_ROOT; };
+		23B50A6D2F696FA000893E3A /* ATCompressionHelper.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = ATCompressionHelper.m; path = ../AppThinnerReporter/AppThinnerReporter/Classes/ATCompressionHelper.m; sourceTree = SOURCE_ROOT; };
+		23B50A6F2F696FB900893E3A /* ATReportDataParser.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ATReportDataParser.h; path = ../AppThinnerReporter/AppThinnerReporter/Classes/ATReportDataParser.h; sourceTree = SOURCE_ROOT; };
+		23B50A702F696FB900893E3A /* ATReportDataParser.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = ATReportDataParser.m; path = ../AppThinnerReporter/AppThinnerReporter/Classes/ATReportDataParser.m; sourceTree = SOURCE_ROOT; };
 		23BCE2A92F475240000696F4 /* AnalysisProject+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AnalysisProject+CoreDataClass.swift"; sourceTree = "<group>"; };
 		23BCE2AA2F475240000696F4 /* AnalysisProject+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AnalysisProject+CoreDataProperties.swift"; sourceTree = "<group>"; };
 		23BCE2AB2F475240000696F4 /* AnalysisResult+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AnalysisResult+CoreDataClass.swift"; sourceTree = "<group>"; };
@@ -157,9 +165,7 @@
 		A1C006 /* CARParser.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CARParser.h; sourceTree = "<group>"; };
 		A1C007 /* CoreUI.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CoreUI.h; sourceTree = "<group>"; };
 		A1C008 /* AppThinnerAnalyzer-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "AppThinnerAnalyzer-Bridging-Header.h"; sourceTree = "<group>"; };
-		A1C100 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		A1C10A /* UnusedSymbolScanner */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = UnusedSymbolScanner; sourceTree = BUILT_PRODUCTS_DIR; };
-		A1C113 /* MachOUnusedSymbolAnalyzer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MachOUnusedSymbolAnalyzer.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -292,6 +298,26 @@
 			name = "Recovered References";
 			sourceTree = "<group>";
 		};
+		23B50A612F67F9D600893E3A /* UnusedSymbolScanner */ = {
+			isa = PBXGroup;
+			children = (
+				23B50A5F2F67F9D600893E3A /* MachOUnusedSymbolAnalyzer.swift */,
+				23B50A602F67F9D600893E3A /* main.swift */,
+			);
+			path = UnusedSymbolScanner;
+			sourceTree = "<group>";
+		};
+		23B50A682F696F4500893E3A /* Parser */ = {
+			isa = PBXGroup;
+			children = (
+				23B50A6F2F696FB900893E3A /* ATReportDataParser.h */,
+				23B50A702F696FB900893E3A /* ATReportDataParser.m */,
+				23B50A6C2F696FA000893E3A /* ATCompressionHelper.h */,
+				23B50A6D2F696FA000893E3A /* ATCompressionHelper.m */,
+			);
+			path = Parser;
+			sourceTree = "<group>";
+		};
 		23BCE2B12F475240000696F4 /* CoreData */ = {
 			isa = PBXGroup;
 			children = (
@@ -377,15 +403,16 @@
 			children = (
 				A10031 /* AppThinnerAnalyzer */,
 				A10032 /* AppThinnerAnalyzerTests */,
-				A1C10C /* UnusedSymbolScanner */,
 				A10033 /* Products */,
 				233B18AB2F5B1E750006BF72 /* Recovered References */,
+				23B50A612F67F9D600893E3A /* UnusedSymbolScanner */,
 			);
 			sourceTree = "<group>";
 		};
 		A10031 /* AppThinnerAnalyzer */ = {
 			isa = PBXGroup;
 			children = (
+				23B50A682F696F4500893E3A /* Parser */,
 				A10006 /* Assets.xcassets */,
 				A1C008 /* AppThinnerAnalyzer-Bridging-Header.h */,
 				A10004 /* ContentView.swift */,
@@ -438,15 +465,6 @@
 				A1C007 /* CoreUI.h */,
 			);
 			path = CARParser;
-			sourceTree = "<group>";
-		};
-		A1C10C /* UnusedSymbolScanner */ = {
-			isa = PBXGroup;
-			children = (
-				A1C100 /* main.swift */,
-				A1C113 /* MachOUnusedSymbolAnalyzer.swift */,
-			);
-			path = UnusedSymbolScanner;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -583,6 +601,7 @@
 				23BCE2DA2F475240000696F4 /* AnalysisResult+CoreDataClass.swift in Sources */,
 				23BCE2DB2F475240000696F4 /* AnalysisProject+CoreDataClass.swift in Sources */,
 				23BCE2DC2F475240000696F4 /* MainView.swift in Sources */,
+				23B50A6E2F696FA000893E3A /* ATCompressionHelper.m in Sources */,
 				23BCE2DD2F475240000696F4 /* HistoricalDataManager.swift in Sources */,
 				23BCE2DE2F475240000696F4 /* CodeAnalyzer.swift in Sources */,
 				23BCE2DF2F475240000696F4 /* TreemapGenerator.swift in Sources */,
@@ -592,6 +611,7 @@
 				23271E5D2F65886E00CDCED3 /* AssetsCatalogParser.swift in Sources */,
 				23BCE2E32F475240000696F4 /* KeyboardShortcuts.swift in Sources */,
 				23BCE2E52F475240000696F4 /* ExternalUnusedData+CoreDataProperties.swift in Sources */,
+				23B50A712F696FB900893E3A /* ATReportDataParser.m in Sources */,
 				23BCE2E62F475240000696F4 /* LinkmapAnalyzer.swift in Sources */,
 				23BCE3A12F476300000696F4 /* LinkmapPathFallbackResolver.swift in Sources */,
 				23BCE2E72F475240000696F4 /* ReportGenerator.swift in Sources */,
@@ -641,11 +661,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				23271E4B2F655F3E00CDCED3 /* MachOUnusedSymbolAnalyzer.swift in Sources */,
-				A1C101 /* main.swift in Sources */,
 				A1C102 /* DataModels.swift in Sources */,
 				A1C103 /* LinkmapAnalyzer.swift in Sources */,
 				A1C104 /* LinkmapPathFallbackResolver.swift in Sources */,
+				23B50A622F67F9D600893E3A /* MachOUnusedSymbolAnalyzer.swift in Sources */,
+				23B50A632F67F9D600893E3A /* main.swift in Sources */,
 				A1C105 /* BinaryUnusedCodeAnalyzer.swift in Sources */,
 				A1C106 /* UnusedSymbolMappingService.swift in Sources */,
 				A1C107 /* PackageParser.swift in Sources */,

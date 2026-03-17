@@ -13,12 +13,14 @@
         _resourcePath = [path copy];
         _size = size;
         _callCount = 1;
+        _loadMethod = nil;
     }
     return self;
 }
 
 - (NSString *)reportString {
-    return [NSString stringWithFormat:@"%@|%lu|%lu", _resourcePath, (unsigned long)_size, (unsigned long)_callCount];
+    NSString *method = _loadMethod.length ? _loadMethod : @"";
+    return [NSString stringWithFormat:@"%@|%lu|%lu|%@", _resourcePath, (unsigned long)_size, (unsigned long)_callCount, method];
 }
 
 + (instancetype)fromReportString:(NSString *)reportString {
@@ -30,6 +32,12 @@
     NSUInteger count = [parts[2] integerValue];
     ATResourceUsageInfo *info = [[ATResourceUsageInfo alloc] initWithPath:path size:size];
     info.callCount = count;
+    if (parts.count >= 4) {
+        NSString *method = parts[3];
+        if (method.length) {
+            info.loadMethod = method;
+        }
+    }
     return info;
 }
 

@@ -6,11 +6,14 @@
 //
 
 #import "ATObjCClassCollector.h"
-#import <objc/runtime.h>
 #import <dlfcn.h>
 #import <mach-o/getsect.h>
 #import <mach-o/dyld.h>
+#import <objc/objc.h>
 #import <stdint.h>
+#import <Foundation/NSObjCRuntime.h>
+#import <objc/NSObject.h>
+#import <objc/runtime.h>
 
 #if __LP64__
 
@@ -64,44 +67,62 @@ bool at_objc_isClassRealized(Class cls) {
 #endif
 }
 
-static const struct section_64 *at_getClassListSection(const struct mach_header_64 *header) {
-    const struct section_64 *sec = getsectbynamefromheader_64(header, "__DATA", "__objc_classlist");
-    if (!sec) sec = getsectbynamefromheader_64(header, "__DATA_CONST", "__objc_classlist");
-    if (!sec) sec = getsectbynamefromheader_64(header, "__DATA_DIRTY", "__objc_classlist");
-    return sec;
+const uintptr_t at_getCurSectionHeader(void)
+{
+    Dl_info info;
+    dladdr((const void *)&at_getCurSectionHeader, &info);
+    const uintptr_t mach_header = (uintptr_t)info.dli_fbase;
+    return mach_header;
 }
 
-static void at_collectClassesFromHeader(const struct mach_header_64 *header, int64_t slide,
-                                        Class * _Nullable buffer, int bufferLen, int *outCount) {
-    const struct section_64 *sec = at_getClassListSection(header);
-    if (!sec) return;
-    uint64_t addr = sec->offset;
-    uint64_t end = addr + sec->size;
-    uintptr_t base = (uintptr_t)header + slide;
-    while (addr < end && (buffer == NULL || *outCount < bufferLen)) {
-        Class cls = (__bridge Class)(*(void **)(base + addr));
-        if (cls) {
-            if (buffer) buffer[*outCount] = cls;
-            (*outCount)++;
-        }
-        addr += sizeof(void *);
+const struct section_64* at_getCurClassListSection(const uintptr_t mach_header)
+{
+    const struct section_64 *section = getsectbynamefromheader_64((const struct mach_header_64 *)mach_header, "__DATA", "__objc_classlist");
+    if (section == NULL) {
+        section = getsectbynamefromheader_64((const struct mach_header_64 *)mach_header, "__DATA_CONST", "__objc_classlist");
     }
+    if (section == NULL) {
+        section = getsectbynamefromheader_64((const struct mach_header_64 *)mach_header, "__DATA_DIRTY", "__objc_classlist");
+    }
+    
+    if (section == NULL) {
+        return 0;
+    }
+    
+    return section;
 }
 
 int at_objc_allClassCount(void) {
 #if !__LP64__
     return 0;
 #else
-    int n = 0;
-    uint32_t count = _dyld_image_count();
-    for (uint32_t i = 0; i < count; i++) {
-        const struct mach_header *h = _dyld_get_image_header(i);
-        if (h->magic != MH_MAGIC_64 && h->magic != MH_CIGAM_64) continue;
-        const struct section_64 *sec = at_getClassListSection((const struct mach_header_64 *)h);
-        if (sec) n += (int)(sec->size / sizeof(void *));
+    const uintptr_t mach_header = at_getCurSectionHeader();
+    const struct section_64 *section = at_getCurClassListSection(mach_header);
+    if (section == NULL) {
+        return 0;
     }
-    return n;
+    return (int)(section->size / sizeof(void *));
 #endif
+}
+
+int at_objc_getRealizedClasses(Class *buffer, int bufferLen)
+{
+    const uintptr_t mach_header = at_getCurSectionHeader();
+    const struct section_64 *section = at_getCurClassListSection(mach_header);
+    if (section == NULL) {
+        return 0;
+    }
+    int count = 0;
+    for (uint64_t addr = section->offset; addr < section->offset + section->size; addr += sizeof(void *)) {
+        Class cls = (__bridge Class)(*(void **)(mach_header + addr));
+        if (at_objc_isClassRealized(cls)) {
+            if (buffer && count < bufferLen) {
+                buffer[count] = cls;
+            }
+            count ++;
+        }
+    }
+    return count;
 }
 
 int at_objc_getAllClasses(Class * _Nullable buffer, int bufferLen) {
@@ -110,16 +131,20 @@ int at_objc_getAllClasses(Class * _Nullable buffer, int bufferLen) {
     (void)bufferLen;
     return 0;
 #else
-    int total = 0;
-    uint32_t imageCount = _dyld_image_count();
-    for (uint32_t i = 0; i < imageCount; i++) {
-        const struct mach_header *h = _dyld_get_image_header(i);
-        if (h->magic != MH_MAGIC_64 && h->magic != MH_CIGAM_64) continue;
-        int64_t slide = _dyld_get_image_vmaddr_slide(i);
-        at_collectClassesFromHeader((const struct mach_header_64 *)h, slide, buffer, bufferLen, &total);
-        if (buffer && total >= bufferLen) break;
+    const uintptr_t mach_header = at_getCurSectionHeader();
+    const struct section_64 *section = at_getCurClassListSection(mach_header);
+    if (section == NULL) {
+        return 0;
     }
-    return total;
+    int count = 0;
+    for (uint64_t addr = section->offset; addr < section->offset + section->size; addr += sizeof(void *)) {
+        Class cls = (__bridge Class)(*(void **)(mach_header + addr));
+        if (buffer && count < bufferLen) {
+            buffer[count] = cls;
+        }
+        count ++;
+    }
+    return count;
 #endif
 }
 
@@ -132,5 +157,5 @@ int at_compareClassesByName(const void *a, const void *b) {
     if (!n2) return 1;
     return strcmp(n1, n2);
 }
-
 #endif // __LP64__
+

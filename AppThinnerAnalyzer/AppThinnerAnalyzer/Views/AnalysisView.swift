@@ -410,12 +410,73 @@ private struct AnalysisConfigRow: View {
 struct ExternalDataSection: View {
     @Binding var showingImporter: Bool
     @ObservedObject var viewModel: MainViewModel
+    @State private var showingHelp = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
                 Text("External Data")
                     .font(.headline)
+                
+                Button {
+                    showingHelp = true
+                } label: {
+                    Image(systemName: "questionmark.circle")
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
+                .help("查看外部 CSV 数据格式说明")
+                .popover(isPresented: $showingHelp, arrowEdge: .top) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("外部数据 CSV 格式说明")
+                            .font(.headline)
+                        Text("当前版本支持从 TXT / CSV / JSON / Plist 导入「无用类」和「无用资源」名单，这里是 CSV 的推荐格式：")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Divider()
+                        Group {
+                            Text("• 无用资源列表（CSV）")
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                            Text("  - 第一列：资源相对路径或完整路径，例如 `Resources/Images/legacy/live_entry_icon.png`")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                            Text("  - 可选表头：首行包含 `Path` 字样时会被自动跳过")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        Divider()
+                        Group {
+                            Text("• 无用类列表（CSV）")
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                            Text("  - 第一列：类名，例如 `LiveHomeViewController`")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                            Text("  - 可选表头：首行包含 `Class` 字样时会被自动跳过")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        Divider()
+                        Text("额外的列内容会被忽略，仅第一列参与导入；如需更复杂的结构，可考虑使用 JSON / Plist 格式。")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        HStack {
+                            Spacer()
+                            Button("关闭") { showingHelp = false }
+                                .keyboardShortcut(.cancelAction)
+                        }
+                        .padding(.top, 4)
+                    }
+                    .padding(16)
+                    .frame(minWidth: 380)
+                }
                 
                 Spacer()
                 

@@ -81,8 +81,20 @@ static NSString * const kATResourcePrefixBundle = @"bundle:";
     os_unfair_lock_unlock(&_lock);
 }
 
-- (void)recordResourcePath:(NSString *)path size:(NSUInteger)size {
+- (void)recordResourcePath:(NSString *)path
+                      size:(NSUInteger)size
+                loadMethod:(nullable NSString *)loadMethod {
     if (!path.length) return;
+    
+    // 过滤掉仅表示「bundle 容器」本身的记录，例如：
+    // bundle:com.tencent.QQWeSing/WSResources.bundle
+    // 真实的资源文件会以 ".bundle/" 作为中间路径，例如 ".../WSResources.bundle/xxx.png"
+    if ([path hasPrefix:kATResourcePrefixBundle]) {
+        NSString *rest = [path substringFromIndex:kATResourcePrefixBundle.length];
+        if ([rest hasSuffix:@".bundle"] && [rest rangeOfString:@".bundle/"].location == NSNotFound) {
+            return;
+        }
+    }
     ATResourceInternalReportBlock reportBlock = nil;
     ATResourceUsageInfo *updatedInfo = nil;
     os_unfair_lock_lock(&_lock);
@@ -90,9 +102,15 @@ static NSString * const kATResourcePrefixBundle = @"bundle:";
     if (info) {
         info.callCount++;
         if (size > 0 && info.size == 0) info.size = size;
+        if (loadMethod.length && info.loadMethod.length == 0) {
+            info.loadMethod = loadMethod;
+        }
     } else {
         _resourceMap[path] = [[ATResourceUsageInfo alloc] initWithPath:path size:size];
         info = _resourceMap[path];
+        if (loadMethod.length) {
+            info.loadMethod = loadMethod;
+        }
     }
     updatedInfo = info;
     reportBlock = _internalReportBlock;
@@ -111,41 +129,104 @@ static NSString * const kATResourcePrefixBundle = @"bundle:";
 
 // MARK: - UIImage imageNamed: hook
 
-static void (*original_imageNamed_)(id, SEL, NSString *) = NULL;
+static UIImage * (*original_imageNamed_)(id, SEL, NSString *) = NULL;
+static UIImage * (*original_imageNamed_inBundle_compatible_)(id, SEL, NSString *, NSBundle *, UITraitCollection *) = NULL;
 
 static UIImage *at_swizzled_imageNamed_(id self, SEL _cmd, NSString *name) {
+    UIImage *image = original_imageNamed_(self, _cmd, name);
+    
     if (name.length) {
         ATResourceUsageCollector *c = [ATResourceUsageCollector shared];
         if (c.collecting) {
-            NSString *path = [kATResourcePrefixImage stringByAppendingString:name];
-            // 尝试获取实际文件大小
-            NSBundle *mainBundle = [NSBundle mainBundle];
-            NSString *fullPath = [mainBundle pathForResource:name ofType:nil];
-            NSUInteger size = fullPath ? [c fileSizeAtPath:fullPath] : 0;
-            [c recordResourcePath:path size:size];
+            NSString *pathKey = [kATResourcePrefixImage stringByAppendingString:name];
+            // 通过 UIImage 估算大小：width * height * scale^2 * 4（RGBA）
+            NSUInteger estimatedSize = 0;
+            if (image) {
+                CGSize size = image.size;
+                CGFloat scale = image.scale > 0 ? image.scale : 1.0;
+                double pixels = (double)size.width * scale * (double)size.height * scale;
+                estimatedSize = (NSUInteger)llround(pixels * 4.0);
+            }
+            [c recordResourcePath:pathKey size:estimatedSize loadMethod:@"UIImage.imageNamed:"];
         }
     }
-    return original_imageNamed_(self, _cmd, name);
+    return image;
+}
+
+static UIImage *at_swizzled_imageNamed_inBundle_compatible_(id self,
+                                                            SEL _cmd,
+                                                            NSString *name,
+                                                            NSBundle *bundle,
+                                                            UITraitCollection *traitCollection) {
+    UIImage *image = original_imageNamed_inBundle_compatible_(self, _cmd, name, bundle, traitCollection);
+    
+    if (name.length) {
+        ATResourceUsageCollector *c = [ATResourceUsageCollector shared];
+        if (c.collecting) {
+            NSBundle *effectiveBundle = bundle ?: [NSBundle mainBundle];
+            NSString *bundleId = effectiveBundle.bundleIdentifier ?: @"main";
+            
+            NSString *pathKey = [NSString stringWithFormat:@"%@%@/%@", kATResourcePrefixBundle, bundleId, name];
+            
+            NSUInteger estimatedSize = 0;
+            if (image) {
+                CGSize size = image.size;
+                CGFloat scale = image.scale > 0 ? image.scale : 1.0;
+                double pixels = (double)size.width * scale * (double)size.height * scale;
+                estimatedSize = (NSUInteger)llround(pixels * 4.0);
+            }
+            
+            [c recordResourcePath:pathKey
+                             size:estimatedSize
+                       loadMethod:@"UIImage.imageNamed:inBundle:compatibleWithTraitCollection:"];
+        }
+    }
+    
+    return image;
 }
 
 - (void)swizzleUIImageImageNamed {
     Class cls = [UIImage class];
+    
+    // swizzle +imageNamed:
     SEL sel = @selector(imageNamed:);
     Method m = class_getClassMethod(cls, sel);
-    if (!m) return;
-    IMP imp = method_getImplementation(m);
-    if (imp == (IMP)at_swizzled_imageNamed_) return;
-    original_imageNamed_ = (void *)imp;
-    method_setImplementation(m, (IMP)at_swizzled_imageNamed_);
+    if (m) {
+        IMP imp = method_getImplementation(m);
+        if (imp != (IMP)at_swizzled_imageNamed_) {
+            original_imageNamed_ = (void *)imp;
+            method_setImplementation(m, (IMP)at_swizzled_imageNamed_);
+        }
+    }
+    
+    // swizzle +imageNamed:inBundle:compatibleWithTraitCollection:
+    SEL sel2 = @selector(imageNamed:inBundle:compatibleWithTraitCollection:);
+    Method m2 = class_getClassMethod(cls, sel2);
+    if (m2) {
+        IMP imp2 = method_getImplementation(m2);
+        if (imp2 != (IMP)at_swizzled_imageNamed_inBundle_compatible_) {
+            original_imageNamed_inBundle_compatible_ = (void *)imp2;
+            method_setImplementation(m2, (IMP)at_swizzled_imageNamed_inBundle_compatible_);
+        }
+    }
 }
 
 - (void)unswizzleUIImageImageNamed {
-    if (!original_imageNamed_) return;
     Class cls = [UIImage class];
-    SEL sel = @selector(imageNamed:);
-    Method m = class_getClassMethod(cls, sel);
-    if (m) method_setImplementation(m, (IMP)original_imageNamed_);
-    original_imageNamed_ = NULL;
+    
+    if (original_imageNamed_) {
+        SEL sel = @selector(imageNamed:);
+        Method m = class_getClassMethod(cls, sel);
+        if (m) method_setImplementation(m, (IMP)original_imageNamed_);
+        original_imageNamed_ = NULL;
+    }
+    
+    if (original_imageNamed_inBundle_compatible_) {
+        SEL sel2 = @selector(imageNamed:inBundle:compatibleWithTraitCollection:);
+        Method m2 = class_getClassMethod(cls, sel2);
+        if (m2) method_setImplementation(m2, (IMP)original_imageNamed_inBundle_compatible_);
+        original_imageNamed_inBundle_compatible_ = NULL;
+    }
 }
 
 // MARK: - NSBundle pathForResource:ofType: hook
@@ -156,14 +237,14 @@ static NSString * (*original_pathForResource_ofType_inDirectory_forLocalization_
 
 static NSString *at_swizzled_pathForResource_ofType_(id self, SEL _cmd, NSString *name, NSString *ext) {
     NSString *result = original_pathForResource_ofType_(self, _cmd, name, ext);
-    if (result.length) {
+    if (result.length && ![ext isEqualToString:@"bundle"]) {
         ATResourceUsageCollector *c = [ATResourceUsageCollector shared];
         if (c.collecting) {
             NSBundle *bundle = (NSBundle *)self;
             NSString *bundleId = bundle.bundleIdentifier ?: @"main";
             NSString *path = [NSString stringWithFormat:@"%@%@/%@%@", kATResourcePrefixBundle, bundleId, name, ext ? [@"." stringByAppendingString:ext] : @""];
             NSUInteger size = [c fileSizeAtPath:result];
-            [c recordResourcePath:path size:size];
+            [c recordResourcePath:path size:size loadMethod:@"NSBundle.pathForResource:ofType:"];
         }
     }
     return result;
@@ -171,7 +252,7 @@ static NSString *at_swizzled_pathForResource_ofType_(id self, SEL _cmd, NSString
 
 static NSString *at_swizzled_pathForResource_ofType_inDirectory_(id self, SEL _cmd, NSString *name, NSString *ext, NSString *subpath) {
     NSString *result = original_pathForResource_ofType_inDirectory_(self, _cmd, name, ext, subpath);
-    if (result.length) {
+    if (result.length && ![ext isEqualToString:@"bundle"]) {
         ATResourceUsageCollector *c = [ATResourceUsageCollector shared];
         if (c.collecting) {
             NSBundle *bundle = (NSBundle *)self;
@@ -179,7 +260,7 @@ static NSString *at_swizzled_pathForResource_ofType_inDirectory_(id self, SEL _c
             NSString *fullSubpath = subpath.length ? [subpath stringByAppendingPathComponent:name] : name;
             NSString *path = [NSString stringWithFormat:@"%@%@/%@%@", kATResourcePrefixBundle, bundleId, fullSubpath, ext ? [@"." stringByAppendingString:ext] : @""];
             NSUInteger size = [c fileSizeAtPath:result];
-            [c recordResourcePath:path size:size];
+            [c recordResourcePath:path size:size loadMethod:@"NSBundle.pathForResource:ofType:inDirectory:"];
         }
     }
     return result;
@@ -187,7 +268,7 @@ static NSString *at_swizzled_pathForResource_ofType_inDirectory_(id self, SEL _c
 
 static NSString *at_swizzled_pathForResource_ofType_inDirectory_forLocalization_(id self, SEL _cmd, NSString *name, NSString *ext, NSString *subpath, NSString *localizationName) {
     NSString *result = original_pathForResource_ofType_inDirectory_forLocalization_(self, _cmd, name, ext, subpath, localizationName);
-    if (result.length) {
+    if (result.length && ![ext isEqualToString:@"bundle"]) {
         ATResourceUsageCollector *c = [ATResourceUsageCollector shared];
         if (c.collecting) {
             NSBundle *bundle = (NSBundle *)self;
@@ -195,7 +276,7 @@ static NSString *at_swizzled_pathForResource_ofType_inDirectory_forLocalization_
             NSString *fullSubpath = subpath.length ? [subpath stringByAppendingPathComponent:name] : name;
             NSString *path = [NSString stringWithFormat:@"%@%@/%@%@", kATResourcePrefixBundle, bundleId, fullSubpath, ext ? [@"." stringByAppendingString:ext] : @""];
             NSUInteger size = [c fileSizeAtPath:result];
-            [c recordResourcePath:path size:size];
+            [c recordResourcePath:path size:size loadMethod:@"NSBundle.pathForResource:ofType:inDirectory:forLocalization:"];
         }
     }
     return result;

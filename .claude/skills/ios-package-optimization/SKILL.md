@@ -16,10 +16,23 @@ description: 基于 AppThinner 导出的 JSON 分析结果，生成标准化的 
 
 ### 1. 输入形式
 
-- Skill 的**唯一输入**是：**本地文件路径字符串**，例如：
+- Skill 的**主要输入**是：**本地文件路径字符串**，例如：
   - `/Users/xxx/Downloads/ai-optimization-report-MyApp.json`
   - 或项目内的相对路径（由上层调用方转换为绝对路径）
 - 调用时不要直接粘贴 JSON 内容，而是提供「已经导出的 JSON 文件路径」。
+
+#### 可选输入：执行模式（mode）
+
+为统一行为，建议上层调用在对话或配置中约定一个**执行模式**（非必填，缺省视为 `"report+execute"`）：
+
+- `mode: "report"`  
+  - 仅生成 **HTML 报告**，不生成任何「执行任务清单」。
+- `mode: "report+execute"`（**默认推荐**）  
+  - 在生成 HTML 报告的同时，额外生成一份**瘦身执行任务清单**（例如 Markdown / 结构化 JSON），包含任务类型、改动范围、预估体积等信息，便于人工 review 与后续落地。
+
+> **重要说明：**
+> - 即便在 `mode: "report+execute"` 下，本 SKILL **只生成任务清单，不直接对工程代码或文件系统做任何改动**。
+> - 「execute」的语义是：**整理并输出三类任务：① 明确的无用资源/无用代码删除候选；② 尝试下架的 Pods 库候选；③ 业务场景下架（目前只给建议，TODO）。具体删除/修改动作需要用户或后续工具在阅读清单后显式确认并执行。**
 
 #### 可选输入：拟下架业务（businessToSunset）
 
@@ -294,6 +307,78 @@ HTML 结构建议如下（可以在实现时按此骨架组织）：
   - 操作步骤；
   - 预估收益；
   - 风险点与验证策略。
+
+---
+
+### 6. 执行任务清单（execute 模式，仅生成计划，不直接改代码）
+
+当上层调用方以 `mode: "report+execute"` 调用本 SKILL 时，除了 HTML 报告外，还应额外生成一份「安装包瘦身执行任务清单」，用于**人工确认后再实施**。  
+本清单仅基于 JSON + 约定规则给出建议，**不对工程做任何改动**。任务分为三类：
+
+#### 6.1 类别一：明确的无用资源 / 无用代码删除
+
+来源：`unusedResources` / `unusedCode`，结合规则筛选出「可以直接考虑删除」的候选项。
+
+- **筛选规则（建议）**
+  - 资源：
+    - 来自 `unusedResources`；
+    - 可排除明显公共目录（例如某些全局 Assets 目录，可按项目需要配置白名单）；
+    - 可按 `resourceSizeBytes` 设定最小阈值（避免为几 KB 的资源生成过多任务）。
+  - 代码：
+    - 来自 `unusedCode`；
+    - 可排除高风险目录（如运行时注入框架、反射较多模块）；具体可按路径前缀维护黑/白名单。
+- **任务内容示例（每条）**
+  - `type`: `"delete_unused_resource"` / `"delete_unused_code"`
+  - `path`: `relativePath`（工程相对路径）
+  - `sizeKB`: 体积（KB）
+  - `reason`: `"标记为 unusedResources / unusedCode，静态分析未发现引用"`
+  - `suggestedAction`: 文本建议（例如「建议先从 Target / 工程引用中移除，如无异常再物理删除文件」）
+- **执行形态**
+  - 本 SKILL **只输出任务清单**（例如 Markdown 或 JSON 数组），不实际移动 / 删除文件。
+  - 后续由人工或其他工具根据清单逐条确认并执行。
+
+#### 6.2 类别二：尝试下架某一个 Pods 库（试探性建议）
+
+来源：`podsDependencies.mainLibSummary` + `podsDependencies.tree` +（可选）业务关键字匹配结果。
+
+- **候选 Pods 选择建议**
+  - 体积较大：`sizeKB` 较高；
+  - 无用占比较高：`unusedRatio` 高；
+  - 依赖关系较「边缘」：`dependedByCount` 小，或者只被拟下架业务模块依赖；
+  - 可结合「拟下架业务」分析中的「疑似关联 Pods」列表，优先推荐只被某业务使用的库。
+- **任务内容示例（每条）**
+  - `type`: `"try_remove_pod"`
+  - `podName`: 例如 `"KSongKit"`
+  - `sizeKB`: 该 Pod 体积；
+  - `unusedRatio`: 无用占比；
+  - `dependedBy`: 依赖该 Pod 的上层模块列表（来自 `dependedByList`）；
+  - `relatedBusinessModules`（可选）：与之高度相关的业务（如「录唱」）。
+  - `suggestedAction`: 文本建议（例如「建议在独立分支中尝试从 Podfile 移除该库，并对相关功能做完整回归」）。
+- **执行形态**
+  - 本 SKILL 不自动修改 Podfile / 执行 `pod install`，只在任务清单中给出「可尝试下架的 Pods」候选及影响面提示。
+
+#### 6.3 类别三：尝试下架某一个业务场景（TODO 预留）
+
+来源：业务模块定义（如「直播」「歌房」「录唱」「短视频」）+ `sizeDistribution` + `unusedCode` / `unusedResources` + 「拟下架业务与可清理范围」章节中的分析结果。
+
+- **当前版本定位**
+  - 当前版本仅在 HTML 报告中提供「拟下架业务」的体积评估和路径关键词分布；
+  - 执行任务清单中可以给出**高层级的业务下架建议**（例如「录唱业务可节约端上约 22.8 MB，Pods 约 90.7 MB，建议先关闭入口再分批下线内部模块」），暂不自动展开到具体代码改动。
+- **后续规划（可在后续版本实现）**
+  - 为每个业务模块生成：
+    - 入口路由 / Tab / 按钮所在文件的大致位置信息；
+    - 主要功能模块目录（如 `Modules/Live`、`Modules/KSong`）；
+    - 可节约体积（端上源码 + 疑似关联 Pods）。
+  - 形成更细粒度的任务：
+    - `type`: `"try_disable_business"`
+    - `businessName`: 例如 `"录唱"`
+    - `entryPoints`: 入口所在文件路径 + 描述
+    - `mainDirectories`: 主要业务目录列表
+    - `suggestedAction`: 「先在配置层关闭入口，再分阶段移除内部模块及 Pods」
+
+> **结论：**
+> - 当前正式版 SKILL 中，「execute」仅指**生成上述三类任务的「计划/清单」**，不会直接改代码或文件。
+> - 多 Target 场景暂不在本 SKILL 的执行范围内，所有任务都以 `relativePath` 和 Pod 名等信息给出，由调用方结合具体工程结构执行。
 
 ---
 

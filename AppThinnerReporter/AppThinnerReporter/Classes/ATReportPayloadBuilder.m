@@ -5,6 +5,7 @@
 
 #import "ATReportPayloadBuilder.h"
 #import "ATCompressionHelper.h"
+#import "ATReporterKeys.h"
 
 @implementation ATReportPayloadBuilder
 
@@ -14,29 +15,30 @@
                               usedResourceString:(NSString *)usedResourceString
                                  extraMetadata:(NSDictionary *)extraMetadata {
     NSMutableDictionary *payload = [NSMutableDictionary dictionary];
-    payload[@"report_time"] = @((long long)([[NSDate date] timeIntervalSince1970] * 1000));
+    payload[kATReporterPayloadKeyReportTime] = @((long long)([[NSDate date] timeIntervalSince1970] * 1000));
+    payload[kATReporterPayloadKeyReportType] = @"code";
     if (allClassNames.count > 0) {
-        payload[@"all_class_count"] = @(allClassNames.count);
-        payload[@"all_class_list"] = allClassNames;
+        payload[kATReporterPayloadKeyAllClassCount] = @(allClassNames.count);
+        payload[kATReporterPayloadKeyAllClassList] = allClassNames;
     }
 
     if (realizedBitmap.length) {
         NSString *base64 = [ATCompressionHelper base64GzipFromBitstrings:@[realizedBitmap]];
-        if (base64) payload[@"realized_bitmap_base64_gzip"] = base64;
-        payload[@"report_mode"] = @"bitmap";
+        if (base64) payload[kATReporterPayloadKeyRealizedBitmapBase64Gzip] = base64;
+        payload[kATReporterPayloadKeyReportMode] = @"bitmap";
     } else if (reportClassNames.count) {
-        payload[@"realized_class_names"] = reportClassNames;
-        payload[@"report_mode"] = @"class_names";
+        payload[kATReporterPayloadKeyRealizedClassNames] = reportClassNames;
+        payload[kATReporterPayloadKeyReportMode] = @"class_names";
     }
 
     if (usedResourceString.length) {
-        payload[@"used_resource_string"] = usedResourceString;
+        payload[kATReporterPayloadKeyUsedResourceString] = usedResourceString;
     }
 
     if (extraMetadata.count) {
-        NSMutableDictionary *meta = [payload[@"metadata"] mutableCopy] ?: [NSMutableDictionary dictionary];
+        NSMutableDictionary *meta = [payload[kATReporterPayloadKeyMetadata] mutableCopy] ?: [NSMutableDictionary dictionary];
         [meta addEntriesFromDictionary:extraMetadata];
-        payload[@"metadata"] = meta;
+        payload[kATReporterPayloadKeyMetadata] = meta;
     }
     return [payload copy];
 }
