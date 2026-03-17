@@ -81,6 +81,44 @@ class ExternalDataImporter: ExternalDataImporterProtocol {
         }
     }
     
+    /// 基于 AppThinnerReporter 上报数据的三种文件联合解析外部数据：
+    /// 1. 类映射 plist（必选，提供 all_class_list；对应 class_mapping_X.plist）
+    /// 2. 上报平台统计的类使用 CSV（必选，包含 realized_bitmap_base64_gzip 等列；例如 UnusedClasses.csv）
+    /// 3. 上报平台统计的资源使用 CSV（可选）
+    /// 返回值为「外部无用资源路径列表」和「外部无用类名列表」。
+    func importReporterExternalData(
+        classUsagePlistPath: String?,
+        classUsageCSVPath: String?,
+        resourceUsageCSVPath: String?
+    ) async throws -> (unusedResources: [String], unusedClasses: [String]) {
+        var externalResources: [String] = []
+        var externalClasses: [String] = []
+        
+        // 资源 CSV：沿用现有 CSV 资源列表解析逻辑（第一列为资源路径）
+        if let resourcePath = resourceUsageCSVPath {
+            externalResources = try await parseCSVResourceList(from: resourcePath)
+        }
+        
+        // 类使用：要求同时提供「类映射 plist + 统计 CSV」，与当前 class_mapping_X.plist + UnusedClasses.csv 一致。
+        if let csvPath = classUsageCSVPath, let mappingPath = classUsagePlistPath {
+            do {
+                let data = try ATReportDataParser.parseCSVFile(
+                    withClassMappingPlist: mappingPath,
+                    csvFilePath: csvPath
+                )
+                // ObjC NSArray<NSString *> * → Swift [String]
+                externalClasses = (data.unusedClasses as? [String]) ?? []
+            } catch {
+                throw ImportError.invalidData(error.localizedDescription)
+            }
+        } else if classUsageCSVPath != nil || classUsagePlistPath != nil {
+            // 如果只给了其中一个，认为配置不完整，抛出明确错误提示。
+            throw ImportError.invalidData("Both class mapping plist (all_class_list) and class usage CSV (realized_bitmap_base64_gzip) are required for Reporter class data import.")
+        }
+        
+        return (unusedResources: externalResources, unusedClasses: externalClasses)
+    }
+    
     func mergeWithLocalAnalysis(
         externalUnusedResources: [String],
         localUnusedResources: [UnusedResource]

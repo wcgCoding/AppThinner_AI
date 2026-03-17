@@ -22,6 +22,10 @@ class MainViewModel: ObservableObject {
     @Published var selectedLinkmapPath: String?
     @Published var externalUnusedResources: [String] = []
     @Published var externalUnusedClasses: [String] = []
+    /// 外部 Reporter 数据导入文件路径（持久化）
+    @Published var reporterClassMappingPlistPath: String?
+    @Published var reporterClassUsageCSVPath: String?
+    @Published var reporterResourceUsageCSVPath: String?
     
     /// 分析配置选项（代码重复 / 资源重复 / Pods 依赖扫描），持久化到 UserDefaults
     @Published var analysisOptions: AnalysisOptions = .default
@@ -31,6 +35,9 @@ class MainViewModel: ObservableObject {
         static let projectPath = "AppThinner.cachedProjectPath"
         static let ipaPath = "AppThinner.cachedIpaPath"
         static let linkmapPath = "AppThinner.cachedLinkmapPath"
+        static let reporterClassMappingPlistPath = "AppThinner.reporter.classMappingPlistPath"
+        static let reporterClassUsageCSVPath = "AppThinner.reporter.classUsageCSVPath"
+        static let reporterResourceUsageCSVPath = "AppThinner.reporter.resourceUsageCSVPath"
         static let enableCodeDuplicateScan = "AppThinner.analysisOptions.enableCodeDuplicateScan"
         static let enableResourceDuplicateScan = "AppThinner.analysisOptions.enableResourceDuplicateScan"
         static let enablePodsDependencyScan = "AppThinner.analysisOptions.enablePodsDependencyScan"
@@ -138,9 +145,35 @@ class MainViewModel: ObservableObject {
             let projectPathToUse = projectPath ?? selectedProjectPath
             let ipaPathToUse = ipaPath ?? selectedIpaPath
             let linkmapPathToUse = linkmapPath ?? selectedLinkmapPath
-            let externalResourcesToUse = externalUnusedResources ?? self.externalUnusedResources
-            let externalClassesToUse = externalUnusedClasses ?? self.externalUnusedClasses
+            var externalResourcesToUse = externalUnusedResources ?? self.externalUnusedResources
+            var externalClassesToUse = externalUnusedClasses ?? self.externalUnusedClasses
             let optionsToUse = analysisOptions ?? self.analysisOptions
+
+            // 如果本地外部无用列表为空，而 Reporter 导入路径（类 / 资源任一）已配置，则在开始分析前自动解析 Reporter 外部数据。
+            // 支持三种组合：
+            // 1）仅 plist + CSV → 只导入外部无用类；
+            // 2）仅资源 CSV → 只导入外部无用资源；
+            // 3）两者都有 → 同时导入类和资源。
+            if externalResourcesToUse.isEmpty && externalClassesToUse.isEmpty,
+               reporterClassMappingPlistPath != nil ||
+               reporterClassUsageCSVPath != nil ||
+               reporterResourceUsageCSVPath != nil {
+                do {
+                    let importer = ExternalDataImporter()
+                    let result = try await importer.importReporterExternalData(
+                        classUsagePlistPath: reporterClassMappingPlistPath,
+                        classUsageCSVPath: reporterClassUsageCSVPath,
+                        resourceUsageCSVPath: reporterResourceUsageCSVPath
+                    )
+                    externalResourcesToUse = result.unusedResources
+                    externalClassesToUse = result.unusedClasses
+                    self.externalUnusedResources = result.unusedResources
+                    self.externalUnusedClasses = result.unusedClasses
+                } catch {
+                    // 解析 Reporter 外部数据失败不会中断整个分析流程，只记录错误信息。
+                    errorHandlingService.handleError(error, context: .fileImport)
+                }
+            }
             
             // Validate file permissions before proceeding
             currentOperation = "Validating file permissions..."
@@ -205,6 +238,35 @@ class MainViewModel: ObservableObject {
         }
         
         isAnalyzing = false
+    }
+    
+    // MARK: - External Data Import (Reporter)
+    
+    // MARK: - Reporter External Data Helpers
+
+    func setReporterClassMappingPlist(from url: URL) {
+        reporterClassMappingPlistPath = url.path
+        saveCachedPaths()
+    }
+
+    func setReporterClassUsageCSV(from url: URL) {
+        reporterClassUsageCSVPath = url.path
+        saveCachedPaths()
+    }
+
+    func setReporterResourceUsageCSV(from url: URL) {
+        reporterResourceUsageCSVPath = url.path
+        saveCachedPaths()
+    }
+
+    /// 清理外部 Reporter 相关数据（路径 + 已导入结果）
+    func clearReporterExternalData() {
+        reporterClassMappingPlistPath = nil
+        reporterClassUsageCSVPath = nil
+        reporterResourceUsageCSVPath = nil
+        externalUnusedResources.removeAll()
+        externalUnusedClasses.removeAll()
+        saveCachedPaths()
     }
     
     func loadAnalysisHistory() {
@@ -447,6 +509,20 @@ class MainViewModel: ObservableObject {
                 userDefaults.removeObject(forKey: CacheKeys.linkmapPath)
             }
         }
+
+        // 加载 Reporter 外部导入文件路径（不做 bookmark，仅做存在性校验）
+        if let mappingPath = userDefaults.string(forKey: CacheKeys.reporterClassMappingPlistPath),
+           FileManager.default.fileExists(atPath: mappingPath) {
+            reporterClassMappingPlistPath = mappingPath
+        }
+        if let classCSVPath = userDefaults.string(forKey: CacheKeys.reporterClassUsageCSVPath),
+           FileManager.default.fileExists(atPath: classCSVPath) {
+            reporterClassUsageCSVPath = classCSVPath
+        }
+        if let resourceCSVPath = userDefaults.string(forKey: CacheKeys.reporterResourceUsageCSVPath),
+           FileManager.default.fileExists(atPath: resourceCSVPath) {
+            reporterResourceUsageCSVPath = resourceCSVPath
+        }
     }
     
     /// 保存文件路径到缓存
@@ -476,6 +552,23 @@ class MainViewModel: ObservableObject {
         } else {
             userDefaults.removeObject(forKey: CacheKeys.linkmapPath)
         }
+
+        // 保存 Reporter 外部导入文件路径
+        if let mappingPath = reporterClassMappingPlistPath {
+            userDefaults.set(mappingPath, forKey: CacheKeys.reporterClassMappingPlistPath)
+        } else {
+            userDefaults.removeObject(forKey: CacheKeys.reporterClassMappingPlistPath)
+        }
+        if let classCSVPath = reporterClassUsageCSVPath {
+            userDefaults.set(classCSVPath, forKey: CacheKeys.reporterClassUsageCSVPath)
+        } else {
+            userDefaults.removeObject(forKey: CacheKeys.reporterClassUsageCSVPath)
+        }
+        if let resourceCSVPath = reporterResourceUsageCSVPath {
+            userDefaults.set(resourceCSVPath, forKey: CacheKeys.reporterResourceUsageCSVPath)
+        } else {
+            userDefaults.removeObject(forKey: CacheKeys.reporterResourceUsageCSVPath)
+        }
         
         userDefaults.synchronize()
     }
@@ -504,11 +597,17 @@ class MainViewModel: ObservableObject {
         userDefaults.removeObject(forKey: CacheKeys.projectPath)
         userDefaults.removeObject(forKey: CacheKeys.ipaPath)
         userDefaults.removeObject(forKey: CacheKeys.linkmapPath)
+        userDefaults.removeObject(forKey: CacheKeys.reporterClassMappingPlistPath)
+        userDefaults.removeObject(forKey: CacheKeys.reporterClassUsageCSVPath)
+        userDefaults.removeObject(forKey: CacheKeys.reporterResourceUsageCSVPath)
         userDefaults.synchronize()
         
         selectedProjectPath = nil
         selectedIpaPath = nil
         selectedLinkmapPath = nil
+        reporterClassMappingPlistPath = nil
+        reporterClassUsageCSVPath = nil
+        reporterResourceUsageCSVPath = nil
     }
     
     // MARK: - Analysis Options (persisted in UserDefaults)

@@ -1,10 +1,10 @@
 import SwiftUI
 import UniformTypeIdentifiers
+import AppKit
 
 struct AnalysisView: View {
     @ObservedObject var viewModel: MainViewModel
     @State private var showingFilePicker = false
-    @State private var showingExternalDataImporter = false
     @State private var filePickerType: FilePickerType = .project
     @State private var showingProgressDetails = false
     @State private var animateProgress = false
@@ -25,11 +25,8 @@ struct AnalysisView: View {
                     showingConfigSheet: $showingAnalysisConfig
                 )
                 
-                // External Data Section
-                ExternalDataSection(
-                    showingImporter: $showingExternalDataImporter,
-                    viewModel: viewModel
-                )
+                // External Data Section（直接在主页面展示导入控件）
+                ExternalDataSection(viewModel: viewModel)
                 
                 // Analysis Progress Section - Enhanced for Requirement 7.3
                 if viewModel.isAnalyzing {
@@ -84,9 +81,6 @@ struct AnalysisView: View {
         }
         .sheet(isPresented: $showingAnalysisConfig) {
             AnalysisOptionsSheetView(viewModel: viewModel)
-        }
-        .sheet(isPresented: $showingExternalDataImporter) {
-            ExternalDataImporterView(viewModel: viewModel)
         }
         .sheet(isPresented: $showingProgressDetails) {
             AnalysisProgressDetailView(viewModel: viewModel)
@@ -228,14 +222,22 @@ struct FileInputRow: View {
                     .fontWeight(.medium)
                 
                 if let path = path {
-                    Text(URL(fileURLWithPath: path).lastPathComponent)
-                        .font(.caption)
-                        .foregroundColor(.primary)
-                    Text(path)
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
+                    let url = URL(fileURLWithPath: path)
+                    HStack(spacing: 4) {
+                        Text(url.lastPathComponent)
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.accentColor)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.accentColor.opacity(0.12))
+                            .cornerRadius(4)
+                        Text(path)
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    }
                 } else {
                     Text(subtitle)
                         .font(.caption)
@@ -408,9 +410,11 @@ private struct AnalysisConfigRow: View {
 }
 
 struct ExternalDataSection: View {
-    @Binding var showingImporter: Bool
     @ObservedObject var viewModel: MainViewModel
     @State private var showingHelp = false
+    @State private var classUsagePlistURL: URL?
+    @State private var classUsageCSVURL: URL?
+    @State private var resourceUsageCSVURL: URL?
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -425,18 +429,18 @@ struct ExternalDataSection: View {
                         .foregroundColor(.secondary)
                 }
                 .buttonStyle(.plain)
-                .help("查看外部 CSV 数据格式说明")
+                .help("查看外部数据导入格式说明")
                 .popover(isPresented: $showingHelp, arrowEdge: .top) {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("外部数据 CSV 格式说明")
+                        Text("外部数据导入格式说明")
                             .font(.headline)
-                        Text("当前版本支持从 TXT / CSV / JSON / Plist 导入「无用类」和「无用资源」名单，这里是 CSV 的推荐格式：")
+                        Text("当前版本支持两种模式：1）直接导入简单 TXT/CSV/JSON/Plist 名单；2）从 AppThinnerReporter 上报数据（类映射 plist + 统计 CSV）自动计算无用类和无用资源。")
                             .font(.caption)
                             .foregroundColor(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                         Divider()
                         Group {
-                            Text("• 无用资源列表（CSV）")
+                            Text("• 简单模式：无用资源列表（CSV）")
                                 .font(.subheadline)
                                 .fontWeight(.semibold)
                             Text("  - 第一列：资源相对路径或完整路径，例如 `Resources/Images/legacy/live_entry_icon.png`")
@@ -450,7 +454,7 @@ struct ExternalDataSection: View {
                         }
                         Divider()
                         Group {
-                            Text("• 无用类列表（CSV）")
+                            Text("• 简单模式：无用类列表（CSV）")
                                 .font(.subheadline)
                                 .fontWeight(.semibold)
                             Text("  - 第一列：类名，例如 `LiveHomeViewController`")
@@ -463,7 +467,21 @@ struct ExternalDataSection: View {
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                         Divider()
-                        Text("额外的列内容会被忽略，仅第一列参与导入；如需更复杂的结构，可考虑使用 JSON / Plist 格式。")
+                        Group {
+                            Text("• Reporter 模式：类 & 资源使用数据")
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                            Text("  - 类：选择 `class_mapping_xxx.plist`（提供 all_class_list）+ 对应的类使用统计 CSV（例如 `UnusedClasses.csv`，包含 `realized_bitmap_base64_gzip` 列），工具会自动按位图 OR 汇总计算未使用类。")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                            Text("  - 资源：选择上报平台导出的资源统计 CSV，默认按第一列资源路径导入为外部无用资源名单，如需更精细策略可在平台侧先过滤。")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        Divider()
+                        Text("简单模式下，额外的列内容会被忽略，仅第一列参与导入；如需更复杂的结构，可考虑使用 JSON / Plist 或 Reporter 模式。")
                             .font(.caption2)
                             .foregroundColor(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -480,44 +498,184 @@ struct ExternalDataSection: View {
                 
                 Spacer()
                 
-                Button("Import") {
-                    showingImporter = true
+                if !viewModel.externalUnusedResources.isEmpty || !viewModel.externalUnusedClasses.isEmpty {
+                    VStack(alignment: .trailing, spacing: 2) {
+                        if !viewModel.externalUnusedResources.isEmpty {
+                            Text("Unused Resources: \(viewModel.externalUnusedResources.count)")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+                        if !viewModel.externalUnusedClasses.isEmpty {
+                            Text("Unused Classes: \(viewModel.externalUnusedClasses.count)")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+                    }
                 }
-                .buttonStyle(.bordered)
             }
             
-            if !viewModel.externalUnusedResources.isEmpty || !viewModel.externalUnusedClasses.isEmpty {
-                VStack(alignment: .leading, spacing: 8) {
-                    if !viewModel.externalUnusedResources.isEmpty {
-                        Text("Unused Resources: \(viewModel.externalUnusedResources.count) items")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+            // Reporter 模式导入区域，直接展示在主页面
+            VStack(spacing: 12) {
+                GroupBox("类使用数据（Reporter 输出）") {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("类映射 plist（必选）")
+                                    .font(.subheadline)
+                                Text("例如 `class_mapping_5.97.0_998.plist`，仅包含 all_class_list 和元数据。")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
+                            Spacer()
+                            Button("选择…") {
+                                selectFile(allowedExtensions: ["plist"]) { url in
+                                    classUsagePlistURL = url
+                                    viewModel.setReporterClassMappingPlist(from: url)
+                                }
+                            }
+                        }
+                        if let url = classUsagePlistURL ?? viewModel.reporterClassMappingPlistPath.map(URL.init(fileURLWithPath:)) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                HStack(spacing: 4) {
+                                    Text("已选择:")
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                    Text(url.lastPathComponent)
+                                        .font(.caption)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(.accentColor)
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 2)
+                                        .background(Color.accentColor.opacity(0.12))
+                                        .cornerRadius(4)
+                                }
+                                Text(url.path)
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                                    .lineLimit(1)
+                                    .truncationMode(.middle)
+                            }
+                        }
+                        
+                        Divider()
+                        
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("类使用统计 CSV（必选）")
+                                    .font(.subheadline)
+                                Text("来自上报平台的聚合表，例如 `UnusedClasses.csv`，包含 `realized_bitmap_base64_gzip` 和/或 `unused_class_name` 列。")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
+                            Spacer()
+                            Button("选择…") {
+                                selectFile(allowedExtensions: ["csv"]) { url in
+                                    classUsageCSVURL = url
+                                    viewModel.setReporterClassUsageCSV(from: url)
+                                }
+                            }
+                        }
+                        if let url = classUsageCSVURL ?? viewModel.reporterClassUsageCSVPath.map(URL.init(fileURLWithPath:)) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                HStack(spacing: 4) {
+                                    Text("已选择:")
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                    Text(url.lastPathComponent)
+                                        .font(.caption)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(.accentColor)
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 2)
+                                        .background(Color.accentColor.opacity(0.12))
+                                        .cornerRadius(4)
+                                }
+                                Text(url.path)
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                                    .lineLimit(1)
+                                    .truncationMode(.middle)
+                            }
+                        }
                     }
-                    
-                    if !viewModel.externalUnusedClasses.isEmpty {
-                        Text("Unused Classes: \(viewModel.externalUnusedClasses.count) items")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    Button("Clear External Data") {
-                        viewModel.externalUnusedResources.removeAll()
-                        viewModel.externalUnusedClasses.removeAll()
-                    }
-                    .buttonStyle(.borderless)
-                    .foregroundColor(.red)
-                    .font(.caption)
+                    .padding(8)
                 }
-            } else {
-                Text("No external data imported")
-                    .font(.caption)
+                
+                GroupBox("资源使用数据（Reporter 输出）") {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("资源使用统计 CSV（可选）")
+                                    .font(.subheadline)
+                                Text("通常为按资源聚合后的 CSV，第一列为资源路径。")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
+                            Spacer()
+                            Button("选择…") {
+                                selectFile(allowedExtensions: ["csv"]) { url in
+                                    resourceUsageCSVURL = url
+                                    viewModel.setReporterResourceUsageCSV(from: url)
+                                }
+                            }
+                        }
+                        if let url = resourceUsageCSVURL ?? viewModel.reporterResourceUsageCSVPath.map(URL.init(fileURLWithPath:)) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                HStack(spacing: 4) {
+                                    Text("已选择:")
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                    Text(url.lastPathComponent)
+                                        .font(.caption)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(.accentColor)
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 2)
+                                        .background(Color.accentColor.opacity(0.12))
+                                        .cornerRadius(4)
+                                }
+                                Text(url.path)
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                                    .lineLimit(1)
+                                    .truncationMode(.middle)
+                            }
+                        }
+                    }
+                    .padding(8)
+                }
+            }
+            
+            HStack {
+                Button("Clear External Data") {
+                    viewModel.clearReporterExternalData()
+                }
+                .buttonStyle(.borderless)
+                .foregroundColor(.red)
+                .font(.caption)
+                
+                Spacer()
+                
+                Text("开始分析时将自动使用已选择的 Reporter 文件进行外部数据解析。")
+                    .font(.caption2)
                     .foregroundColor(.secondary)
-                    .italic()
             }
         }
         .padding()
         .background(Color(NSColor.controlBackgroundColor))
         .cornerRadius(12)
+    }
+    
+    private func selectFile(allowedExtensions: [String], completion: @escaping (URL) -> Void) {
+        let panel = NSOpenPanel()
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+        panel.canChooseFiles = true
+        panel.allowedFileTypes = allowedExtensions
+        
+        if panel.runModal() == .OK, let url = panel.url {
+            completion(url)
+        }
     }
 }
 
@@ -880,55 +1038,4 @@ struct SummaryCard: View {
     }
 }
 
-struct ExternalDataImporterView: View {
-    @ObservedObject var viewModel: MainViewModel
-    @Environment(\.dismiss) private var dismiss
-    
-    var body: some View {
-        VStack(spacing: 20) {
-            Text("Import External Data")
-                .font(.title2)
-                .fontWeight(.semibold)
-            
-            Text("Import lists of unused resources and classes from external tools")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-            
-            // TODO: Implement actual file import functionality
-            VStack(spacing: 16) {
-                Button("Import Unused Resources List") {
-                    // TODO: Implement in future tasks
-                }
-                .buttonStyle(.bordered)
-                
-                Button("Import Unused Classes List") {
-                    // TODO: Implement in future tasks
-                }
-                .buttonStyle(.bordered)
-            }
-            
-            Spacer()
-            
-            HStack {
-                Button("Cancel") {
-                    dismiss()
-                }
-                .buttonStyle(.bordered)
-                
-                Spacer()
-                
-                Button("Done") {
-                    dismiss()
-                }
-                .buttonStyle(.borderedProminent)
-            }
-        }
-        .padding()
-        .frame(width: 400, height: 300)
-    }
-}
-
-#Preview {
-    AnalysisView(viewModel: MainViewModel())
-}
+// 预览在 Reporter 导入改造后可按需补充
