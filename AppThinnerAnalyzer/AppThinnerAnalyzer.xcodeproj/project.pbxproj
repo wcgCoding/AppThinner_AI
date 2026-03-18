@@ -307,7 +307,7 @@
 			path = UnusedSymbolScanner;
 			sourceTree = "<group>";
 		};
-		23B50A682F696F4500893E3A /* Parser */ = {
+		23B50A722F6A4B0B00893E3A /* Parser */ = {
 			isa = PBXGroup;
 			children = (
 				23B50A6F2F696FB900893E3A /* ATReportDataParser.h */,
@@ -412,7 +412,7 @@
 		A10031 /* AppThinnerAnalyzer */ = {
 			isa = PBXGroup;
 			children = (
-				23B50A682F696F4500893E3A /* Parser */,
+				23B50A722F6A4B0B00893E3A /* Parser */,
 				A10006 /* Assets.xcassets */,
 				A1C008 /* AppThinnerAnalyzer-Bridging-Header.h */,
 				A10004 /* ContentView.swift */,
