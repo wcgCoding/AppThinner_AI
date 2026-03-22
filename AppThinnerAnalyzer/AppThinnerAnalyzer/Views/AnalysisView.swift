@@ -16,8 +16,11 @@ struct AnalysisView: View {
     
     var body: some View {
         ScrollView {
-            VStack(spacing: 24) {
-                // File Input Section
+            VStack(spacing: 28) {
+                // Hero Header
+                HeroHeaderView()
+                
+                // File Input Section - Enhanced Card
                 FileInputSection(
                     viewModel: viewModel,
                     filePickerType: $filePickerType,
@@ -133,6 +136,74 @@ struct AnalysisView: View {
     }
 }
 
+// MARK: - Hero Header
+
+struct HeroHeaderView: View {
+    @State private var isAnimating = false
+    
+    var body: some View {
+        VStack(spacing: 16) {
+            // Animated Icon
+            ZStack {
+                // Outer glow rings
+                ForEach(0..<3) { index in
+                    Circle()
+                        .stroke(Color.accentColor.opacity(0.3 - Double(index) * 0.1), lineWidth: 1)
+                        .frame(width: 80 + CGFloat(index) * 20, height: 80 + CGFloat(index) * 20)
+                        .scaleEffect(isAnimating ? 1.1 : 1.0)
+                        .opacity(isAnimating ? 0.5 : 1.0)
+                        .animation(
+                            .easeInOut(duration: 2.0)
+                            .repeatForever(autoreverses: true)
+                            .delay(Double(index) * 0.3),
+                            value: isAnimating
+                        )
+                }
+                
+                // Main icon container
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.accentColor.opacity(0.8),
+                                Color.accentColor.opacity(0.4)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 70, height: 70)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20)
+                            .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                    )
+                    .shadow(color: Color.accentColor.opacity(0.4), radius: 20, x: 0, y: 8)
+                    .overlay(
+                        Image(systemName: "chart.pie.fill")
+                            .font(.system(size: 32))
+                            .foregroundColor(.white)
+                    )
+            }
+            .onAppear {
+                isAnimating = true
+            }
+            
+            // Title and subtitle
+            VStack(spacing: 6) {
+                Text("iOS App Analyzer")
+                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                    .foregroundColor(.primary)
+                
+                Text("Professional app size analysis & optimization tool")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 20)
+    }
+}
+
 struct FileInputSection: View {
     @ObservedObject var viewModel: MainViewModel
     @Binding var filePickerType: AnalysisView.FilePickerType
@@ -140,65 +211,210 @@ struct FileInputSection: View {
     @Binding var showingConfigSheet: Bool
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 20) {
+            // Enhanced Header
             HStack {
-                Text("Input Files")
-                    .font(.headline)
+                HStack(spacing: 8) {
+                    Image(systemName: "doc.badge.plus")
+                        .font(.title3)
+                        .foregroundColor(.accentColor)
+                    
+                    Text("Input Files")
+                        .font(.title3)
+                        .fontWeight(.semibold)
+                }
+                
                 Spacer()
-                Button("配置") {
+                
+                Button {
                     showingConfigSheet = true
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "gearshape.2")
+                        Text("配置")
+                    }
+                    .font(.subheadline)
+                    .fontWeight(.medium)
                 }
                 .buttonStyle(.bordered)
+                .controlSize(.small)
             }
             
-            // Project Directory
-            FileInputRow(
-                title: "Project Directory",
-                subtitle: "Select the iOS project directory",
-                path: viewModel.selectedProjectPath,
-                systemImage: "folder",
-                onSelect: {
-                    filePickerType = .project
-                    showingFilePicker = true
-                },
-                onClear: {
-                    viewModel.clearSelectedProjectPath()
-                }
-            )
-            
-            // IPA File
-            FileInputRow(
-                title: "IPA File",
-                subtitle: "Select the .ipa file to analyze",
-                path: viewModel.selectedIpaPath,
-                systemImage: "doc.zipper",
-                onSelect: {
-                    filePickerType = .ipa
-                    showingFilePicker = true
-                },
-                onClear: {
-                    viewModel.clearSelectedIpaPath()
-                }
-            )
-            
-            // Linkmap File
-            FileInputRow(
-                title: "Linkmap File",
-                subtitle: "Select the linkmap.txt file",
-                path: viewModel.selectedLinkmapPath,
-                systemImage: "doc.text",
-                onSelect: {
-                    filePickerType = .linkmap
-                    showingFilePicker = true
-                },
-                onClear: {
-                    viewModel.clearSelectedLinkmapPath()
-                }
-            )
+            // File Input Cards
+            VStack(spacing: 12) {
+                // Project Directory
+                ModernFileInputCard(
+                    title: "Project Directory",
+                    subtitle: "Select the iOS project directory",
+                    path: viewModel.selectedProjectPath,
+                    icon: "folder.fill",
+                    iconColor: .blue,
+                    gradientColors: [.blue.opacity(0.3), .cyan.opacity(0.2)],
+                    onSelect: {
+                        filePickerType = .project
+                        showingFilePicker = true
+                    },
+                    onClear: {
+                        viewModel.clearSelectedProjectPath()
+                    }
+                )
+                
+                // IPA File
+                ModernFileInputCard(
+                    title: "IPA File",
+                    subtitle: "Select the .ipa file to analyze",
+                    path: viewModel.selectedIpaPath,
+                    icon: "doc.zipper",
+                    iconColor: .purple,
+                    gradientColors: [.purple.opacity(0.3), .pink.opacity(0.2)],
+                    onSelect: {
+                        filePickerType = .ipa
+                        showingFilePicker = true
+                    },
+                    onClear: {
+                        viewModel.clearSelectedIpaPath()
+                    }
+                )
+                
+                // Linkmap File
+                ModernFileInputCard(
+                    title: "Linkmap File",
+                    subtitle: "Select the linkmap.txt file",
+                    path: viewModel.selectedLinkmapPath,
+                    icon: "doc.text.fill",
+                    iconColor: .orange,
+                    gradientColors: [.orange.opacity(0.3), .yellow.opacity(0.2)],
+                    onSelect: {
+                        filePickerType = .linkmap
+                        showingFilePicker = true
+                    },
+                    onClear: {
+                        viewModel.clearSelectedLinkmapPath()
+                    }
+                )
+            }
         }
-        .padding()
-        .background(Color(NSColor.controlBackgroundColor))
-        .cornerRadius(12)
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color(NSColor.controlBackgroundColor))
+                .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 4)
+        )
+    }
+}
+
+struct ModernFileInputCard: View {
+    let title: String
+    let subtitle: String
+    let path: String?
+    let icon: String
+    let iconColor: Color
+    let gradientColors: [Color]
+    let onSelect: () -> Void
+    let onClear: () -> Void
+    
+    @State private var isHovered = false
+    
+    var body: some View {
+        HStack(spacing: 16) {
+            // Icon Container
+            ZStack {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(
+                        LinearGradient(
+                            colors: gradientColors,
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 48, height: 48)
+                
+                Image(systemName: icon)
+                    .font(.system(size: 22))
+                    .foregroundColor(iconColor)
+            }
+            
+            // Content
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                
+                if let path = path {
+                    let url = URL(fileURLWithPath: path)
+                    HStack(spacing: 6) {
+                        Text(url.lastPathComponent)
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(iconColor.opacity(0.8))
+                            .cornerRadius(6)
+                        
+                        Text(path)
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    }
+                } else {
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            
+            Spacer()
+            
+            // Actions
+            HStack(spacing: 10) {
+                if path != nil {
+                    Button {
+                        onClear()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 18))
+                            .foregroundColor(.red.opacity(0.7))
+                    }
+                    .buttonStyle(.plain)
+                    .help("清除选择")
+                }
+                
+                Button {
+                    onSelect()
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "folder.badge.plus")
+                        Text("选择")
+                    }
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+                .tint(iconColor)
+            }
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(NSColor.textBackgroundColor).opacity(0.5))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(
+                            isHovered ? iconColor.opacity(0.4) : Color.clear,
+                            lineWidth: 1.5
+                        )
+                )
+        )
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.2)) {
+                isHovered = hovering
+            }
+        }
     }
 }
 
@@ -417,16 +633,25 @@ struct ExternalDataSection: View {
     @State private var resourceUsageCSVURL: URL?
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 20) {
+            // Enhanced Header
             HStack {
-                Text("External Data")
-                    .font(.headline)
+                HStack(spacing: 8) {
+                    Image(systemName: "cloud.bolt.fill")
+                        .font(.title3)
+                        .foregroundColor(.teal)
+                    
+                    Text("External Data")
+                        .font(.title3)
+                        .fontWeight(.semibold)
+                }
                 
                 Button {
                     showingHelp = true
                 } label: {
-                    Image(systemName: "questionmark.circle")
-                        .foregroundColor(.secondary)
+                    Image(systemName: "questionmark.circle.fill")
+                        .font(.system(size: 16))
+                        .foregroundColor(.teal.opacity(0.7))
                 }
                 .buttonStyle(.plain)
                 .help("查看外部数据导入格式说明")
@@ -499,171 +724,126 @@ struct ExternalDataSection: View {
                 Spacer()
                 
                 if !viewModel.externalUnusedResources.isEmpty || !viewModel.externalUnusedClasses.isEmpty {
-                    VStack(alignment: .trailing, spacing: 2) {
+                    HStack(spacing: 12) {
                         if !viewModel.externalUnusedResources.isEmpty {
-                            Text("Unused Resources: \(viewModel.externalUnusedResources.count)")
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
+                            Label("\(viewModel.externalUnusedResources.count) Resources", systemImage: "photo")
+                                .font(.caption)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 4)
+                                .background(Color.pink.opacity(0.8))
+                                .cornerRadius(8)
                         }
                         if !viewModel.externalUnusedClasses.isEmpty {
-                            Text("Unused Classes: \(viewModel.externalUnusedClasses.count)")
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
+                            Label("\(viewModel.externalUnusedClasses.count) Classes", systemImage: "curlybraces")
+                                .font(.caption)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 4)
+                                .background(Color.orange.opacity(0.8))
+                                .cornerRadius(8)
                         }
                     }
                 }
             }
             
             // Reporter 模式导入区域，直接展示在主页面
-            VStack(spacing: 12) {
-                GroupBox("类使用数据（Reporter 输出）") {
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("类映射 plist（必选）")
-                                    .font(.subheadline)
-                                Text("例如 `class_mapping_5.97.0_998.plist`，仅包含 all_class_list 和元数据。")
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                            }
-                            Spacer()
-                            Button("选择…") {
-                                selectFile(allowedExtensions: ["plist"]) { url in
-                                    classUsagePlistURL = url
-                                    viewModel.setReporterClassMappingPlist(from: url)
-                                }
-                            }
-                        }
-                        if let url = classUsagePlistURL ?? viewModel.reporterClassMappingPlistPath.map(URL.init(fileURLWithPath:)) {
-                            VStack(alignment: .leading, spacing: 2) {
-                                HStack(spacing: 4) {
-                                    Text("已选择:")
-                                        .font(.caption2)
-                                        .foregroundColor(.secondary)
-                                    Text(url.lastPathComponent)
-                                        .font(.caption)
-                                        .fontWeight(.semibold)
-                                        .foregroundColor(.accentColor)
-                                        .padding(.horizontal, 6)
-                                        .padding(.vertical, 2)
-                                        .background(Color.accentColor.opacity(0.12))
-                                        .cornerRadius(4)
-                                }
-                                Text(url.path)
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                                    .lineLimit(1)
-                                    .truncationMode(.middle)
+            VStack(spacing: 16) {
+                // Class Data Card
+                ModernGroupCard(
+                    title: "类使用数据",
+                    subtitle: "Reporter 输出",
+                    icon: "curlybraces.square.fill",
+                    iconColor: .indigo
+                ) {
+                    VStack(alignment: .leading, spacing: 16) {
+                        // Plist Row
+                        ModernFileSelectorRow(
+                            label: "类映射 plist",
+                            isRequired: true,
+                            description: "例如 class_mapping_5.97.0_998.plist",
+                            selectedURL: classUsagePlistURL ?? viewModel.reporterClassMappingPlistPath.map(URL.init(fileURLWithPath:)),
+                            accentColor: .indigo
+                        ) {
+                            selectFile(allowedExtensions: ["plist"]) { url in
+                                classUsagePlistURL = url
+                                viewModel.setReporterClassMappingPlist(from: url)
                             }
                         }
                         
                         Divider()
                         
-                        HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("类使用统计 CSV（必选）")
-                                    .font(.subheadline)
-                                Text("来自上报平台的聚合表，例如 `UnusedClasses.csv`，包含 `realized_bitmap_base64_gzip` 和/或 `unused_class_name` 列。")
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                            }
-                            Spacer()
-                            Button("选择…") {
-                                selectFile(allowedExtensions: ["csv"]) { url in
-                                    classUsageCSVURL = url
-                                    viewModel.setReporterClassUsageCSV(from: url)
-                                }
-                            }
-                        }
-                        if let url = classUsageCSVURL ?? viewModel.reporterClassUsageCSVPath.map(URL.init(fileURLWithPath:)) {
-                            VStack(alignment: .leading, spacing: 2) {
-                                HStack(spacing: 4) {
-                                    Text("已选择:")
-                                        .font(.caption2)
-                                        .foregroundColor(.secondary)
-                                    Text(url.lastPathComponent)
-                                        .font(.caption)
-                                        .fontWeight(.semibold)
-                                        .foregroundColor(.accentColor)
-                                        .padding(.horizontal, 6)
-                                        .padding(.vertical, 2)
-                                        .background(Color.accentColor.opacity(0.12))
-                                        .cornerRadius(4)
-                                }
-                                Text(url.path)
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                                    .lineLimit(1)
-                                    .truncationMode(.middle)
+                        // CSV Row
+                        ModernFileSelectorRow(
+                            label: "类使用统计 CSV",
+                            isRequired: true,
+                            description: "来自上报平台的聚合表",
+                            selectedURL: classUsageCSVURL ?? viewModel.reporterClassUsageCSVPath.map(URL.init(fileURLWithPath:)),
+                            accentColor: .purple
+                        ) {
+                            selectFile(allowedExtensions: ["csv"]) { url in
+                                classUsageCSVURL = url
+                                viewModel.setReporterClassUsageCSV(from: url)
                             }
                         }
                     }
-                    .padding(8)
                 }
                 
-                GroupBox("资源使用数据（Reporter 输出）") {
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("资源使用统计 CSV（可选）")
-                                    .font(.subheadline)
-                                Text("通常为按资源聚合后的 CSV，第一列为资源路径。")
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                            }
-                            Spacer()
-                            Button("选择…") {
-                                selectFile(allowedExtensions: ["csv"]) { url in
-                                    resourceUsageCSVURL = url
-                                    viewModel.setReporterResourceUsageCSV(from: url)
-                                }
-                            }
-                        }
-                        if let url = resourceUsageCSVURL ?? viewModel.reporterResourceUsageCSVPath.map(URL.init(fileURLWithPath:)) {
-                            VStack(alignment: .leading, spacing: 2) {
-                                HStack(spacing: 4) {
-                                    Text("已选择:")
-                                        .font(.caption2)
-                                        .foregroundColor(.secondary)
-                                    Text(url.lastPathComponent)
-                                        .font(.caption)
-                                        .fontWeight(.semibold)
-                                        .foregroundColor(.accentColor)
-                                        .padding(.horizontal, 6)
-                                        .padding(.vertical, 2)
-                                        .background(Color.accentColor.opacity(0.12))
-                                        .cornerRadius(4)
-                                }
-                                Text(url.path)
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                                    .lineLimit(1)
-                                    .truncationMode(.middle)
+                // Resource Data Card
+                ModernGroupCard(
+                    title: "资源使用数据",
+                    subtitle: "Reporter 输出",
+                    icon: "photo.stack.fill",
+                    iconColor: .teal
+                ) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        ModernFileSelectorRow(
+                            label: "资源使用统计 CSV",
+                            isRequired: false,
+                            description: "按资源聚合后的 CSV，第一列为资源路径",
+                            selectedURL: resourceUsageCSVURL ?? viewModel.reporterResourceUsageCSVPath.map(URL.init(fileURLWithPath:)),
+                            accentColor: .teal
+                        ) {
+                            selectFile(allowedExtensions: ["csv"]) { url in
+                                resourceUsageCSVURL = url
+                                viewModel.setReporterResourceUsageCSV(from: url)
                             }
                         }
                     }
-                    .padding(8)
                 }
             }
             
+            // Footer Actions
             HStack {
-                Button("Clear External Data") {
+                Button {
                     viewModel.clearReporterExternalData()
+                    classUsagePlistURL = nil
+                    classUsageCSVURL = nil
+                    resourceUsageCSVURL = nil
+                } label: {
+                    Label("清除数据", systemImage: "trash")
+                        .font(.subheadline)
                 }
                 .buttonStyle(.borderless)
-                .foregroundColor(.red)
-                .font(.caption)
+                .foregroundColor(.red.opacity(0.8))
                 
                 Spacer()
                 
-                Text("开始分析时将自动使用已选择的 Reporter 文件进行外部数据解析。")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
+                HStack(spacing: 6) {
+                    Image(systemName: "info.circle.fill")
+                        .foregroundColor(.secondary.opacity(0.6))
+                    Text("开始分析时将自动使用已选择的 Reporter 文件")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
             }
         }
-        .padding()
-        .background(Color(NSColor.controlBackgroundColor))
-        .cornerRadius(12)
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color(NSColor.controlBackgroundColor))
+                .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 4)
+        )
     }
     
     private func selectFile(allowedExtensions: [String], completion: @escaping (URL) -> Void) {
@@ -679,29 +859,207 @@ struct ExternalDataSection: View {
     }
 }
 
+// MARK: - Modern UI Components
+
+struct ModernGroupCard<Content: View>: View {
+    let title: String
+    let subtitle: String
+    let icon: String
+    let iconColor: Color
+    @ViewBuilder let content: Content
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Header
+            HStack(spacing: 10) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(iconColor.opacity(0.15))
+                        .frame(width: 36, height: 36)
+                    
+                    Image(systemName: icon)
+                        .font(.system(size: 18))
+                        .foregroundColor(iconColor)
+                }
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                    Text(subtitle)
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+                
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(iconColor.opacity(0.05))
+            
+            Divider()
+            
+            // Content
+            content
+                .padding(16)
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(NSColor.textBackgroundColor).opacity(0.4))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(iconColor.opacity(0.15), lineWidth: 1)
+                )
+        )
+    }
+}
+
+struct ModernFileSelectorRow: View {
+    let label: String
+    let isRequired: Bool
+    let description: String
+    let selectedURL: URL?
+    let accentColor: Color
+    let onSelect: () -> Void
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            // Status Indicator
+            ZStack {
+                Circle()
+                    .fill(selectedURL != nil ? accentColor.opacity(0.2) : Color.gray.opacity(0.15))
+                    .frame(width: 28, height: 28)
+                
+                Image(systemName: selectedURL != nil ? "checkmark" : "doc")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(selectedURL != nil ? accentColor : .secondary)
+            }
+            
+            // Content
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 6) {
+                    Text(label)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                    
+                    if isRequired {
+                        Text("必需")
+                            .font(.caption2)
+                            .fontWeight(.medium)
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.red.opacity(0.7))
+                            .cornerRadius(4)
+                    }
+                }
+                
+                if let url = selectedURL {
+                    HStack(spacing: 6) {
+                        Text(url.lastPathComponent)
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(accentColor.opacity(0.85))
+                            .cornerRadius(6)
+                        
+                        Text(url.path)
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    }
+                } else {
+                    Text(description)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+            
+            Spacer()
+            
+            // Select Button
+            Button {
+                onSelect()
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "folder.badge.plus")
+                    Text(selectedURL != nil ? "更换" : "选择")
+                }
+                .font(.caption)
+                .fontWeight(.medium)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .tint(accentColor)
+        }
+    }
+}
+
 struct AnalysisProgressSection: View {
     @ObservedObject var viewModel: MainViewModel
     @Binding var showingDetails: Bool
     @Binding var animateProgress: Bool
     
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 20) {
+            // Header with animated icon
             HStack {
-                Text("Analysis in Progress")
-                    .font(.headline)
+                HStack(spacing: 10) {
+                    // Animated spinner
+                    ZStack {
+                        Circle()
+                            .stroke(Color.accentColor.opacity(0.2), lineWidth: 3)
+                            .frame(width: 28, height: 28)
+                        
+                        Circle()
+                            .trim(from: 0, to: 0.7)
+                            .stroke(
+                                LinearGradient(
+                                    colors: [.accentColor, .accentColor.opacity(0.5)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ),
+                                style: StrokeStyle(lineWidth: 3, lineCap: .round)
+                            )
+                            .frame(width: 28, height: 28)
+                            .rotationEffect(.degrees(animateProgress ? 360 : 0))
+                            .animation(
+                                .linear(duration: 1.5)
+                                .repeatForever(autoreverses: false),
+                                value: animateProgress
+                            )
+                    }
+                    
+                    Text("Analysis in Progress")
+                        .font(.title3)
+                        .fontWeight(.semibold)
+                }
                 
                 Spacer()
                 
-                Button(action: {
+                Button {
                     showingDetails.toggle()
-                }) {
-                    Image(systemName: showingDetails ? "chevron.up" : "chevron.down")
+                } label: {
+                    HStack(spacing: 4) {
+                        Text("Details")
+                            .font(.subheadline)
+                        Image(systemName: showingDetails ? "chevron.up" : "chevron.down")
+                            .font(.system(size: 12))
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
                 }
-                .buttonStyle(.borderless)
+                .buttonStyle(.bordered)
+                .controlSize(.small)
             }
             
-            // Main Progress Bar
-            VStack(spacing: 8) {
+            // Enhanced Progress Bar
+            VStack(spacing: 10) {
                 HStack {
                     Text(viewModel.currentOperation)
                         .font(.subheadline)
@@ -710,62 +1068,114 @@ struct AnalysisProgressSection: View {
                     Spacer()
                     
                     Text("\(Int(viewModel.analysisProgress * 100))%")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .foregroundColor(.accentColor)
                         .monospacedDigit()
                 }
                 
-                ProgressView(value: viewModel.analysisProgress)
-                    .progressViewStyle(LinearProgressViewStyle(tint: .accentColor))
-                    .scaleEffect(y: 2)
-                    .animation(.easeInOut(duration: 0.3), value: viewModel.analysisProgress)
+                // Custom progress bar with gradient
+                GeometryReader { geometry in
+                    ZStack(alignment: .leading) {
+                        // Background
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(Color.gray.opacity(0.15))
+                            .frame(height: 12)
+                        
+                        // Progress
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(
+                                LinearGradient(
+                                    colors: [.accentColor.opacity(0.8), .accentColor],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .frame(width: max(geometry.size.width * viewModel.analysisProgress, 12), height: 12)
+                            .animation(.easeInOut(duration: 0.3), value: viewModel.analysisProgress)
+                        
+                        // Shine effect
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(
+                                LinearGradient(
+                                    colors: [.white.opacity(0.3), .clear],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                            )
+                            .frame(width: max(geometry.size.width * viewModel.analysisProgress, 12), height: 6)
+                            .offset(y: -3)
+                    }
+                }
+                .frame(height: 12)
             }
             
-            // Animated Activity Indicator
-            HStack(spacing: 12) {
-                ForEach(0..<3) { index in
-                    Circle()
-                        .fill(Color.accentColor)
-                        .frame(width: 8, height: 8)
-                        .scaleEffect(animateProgress ? 1.2 : 0.8)
-                        .animation(
-                            .easeInOut(duration: 0.6)
-                            .repeatForever(autoreverses: true)
-                            .delay(Double(index) * 0.2),
-                            value: animateProgress
-                        )
+            // Status Row
+            HStack(spacing: 16) {
+                // Animated dots
+                HStack(spacing: 6) {
+                    ForEach(0..<3) { index in
+                        Circle()
+                            .fill(Color.accentColor)
+                            .frame(width: 6, height: 6)
+                            .scaleEffect(animateProgress ? 1.3 : 0.8)
+                            .opacity(animateProgress ? 1.0 : 0.5)
+                            .animation(
+                                .easeInOut(duration: 0.5)
+                                .repeatForever(autoreverses: true)
+                                .delay(Double(index) * 0.15),
+                                value: animateProgress
+                            )
+                    }
                 }
                 
                 Text("Processing files...")
-                    .font(.caption)
+                    .font(.subheadline)
                     .foregroundColor(.secondary)
-            }
-            
-            // Estimated Time Remaining
-            if viewModel.analysisProgress > 0.1 {
-                HStack {
-                    Image(systemName: "clock")
-                        .foregroundColor(.secondary)
-                    
-                    Text("Estimated time remaining: \(estimatedTimeRemaining)")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                
+                Spacer()
+                
+                // Estimated Time
+                if viewModel.analysisProgress > 0.1 {
+                    HStack(spacing: 4) {
+                        Image(systemName: "clock.fill")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        
+                        Text("~\(estimatedTimeRemaining) remaining")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(Color.gray.opacity(0.1))
+                    .cornerRadius(6)
                 }
             }
         }
-        .padding()
-        .background(Color.accentColor.opacity(0.05))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.accentColor.opacity(0.3), lineWidth: 1)
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color.accentColor.opacity(0.08),
+                            Color.accentColor.opacity(0.03)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(Color.accentColor.opacity(0.2), lineWidth: 1.5)
+                )
         )
-        .cornerRadius(12)
     }
     
     private var estimatedTimeRemaining: String {
         let progress = max(viewModel.analysisProgress, 0.01)
         let remainingProgress = 1.0 - progress
-        let estimatedSeconds = Int(remainingProgress / progress * 30) // Rough estimate
+        let estimatedSeconds = Int(remainingProgress / progress * 30)
         
         if estimatedSeconds < 60 {
             return "\(estimatedSeconds)s"
@@ -885,114 +1295,166 @@ struct AnalysisSummaryView: View {
     let project: AnalysisProject
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Analysis Results")
-                .font(.headline)
+        VStack(alignment: .leading, spacing: 20) {
+            // Enhanced Header
+            HStack(spacing: 10) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(
+                            LinearGradient(
+                                colors: [.green.opacity(0.3), .mint.opacity(0.2)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 40, height: 40)
+                    
+                    Image(systemName: "checkmark.seal.fill")
+                        .font(.system(size: 20))
+                        .foregroundColor(.green)
+                }
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Analysis Results")
+                        .font(.title3)
+                        .fontWeight(.semibold)
+                    Text(project.name)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                
+                Spacer()
+                
+                // Total size badge
+                Text(formatBytes(project.totalSize))
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 6)
+                    .background(
+                        LinearGradient(
+                            colors: [.blue.opacity(0.9), .purple.opacity(0.8)],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .cornerRadius(8)
+            }
             
+            Divider()
+            
+            // Enhanced Grid
             LazyVGrid(columns: [
                 GridItem(.flexible()),
                 GridItem(.flexible()),
                 GridItem(.flexible())
-            ], spacing: 16) {
-                SummaryCard(
+            ], spacing: 14) {
+                ModernSummaryCard(
                     title: "Total Size",
                     value: formatBytes(project.totalSize),
-                    systemImage: "doc",
-                    color: .blue
+                    systemImage: "doc.fill",
+                    gradientColors: [.blue.opacity(0.4), .cyan.opacity(0.3)]
                 )
                 
-                SummaryCard(
+                ModernSummaryCard(
                     title: "Code Size",
                     value: formatBytes(project.summaryCodeSize != 0 ? project.summaryCodeSize : project.totalCodeSize),
                     systemImage: "curlybraces",
-                    color: .green
+                    gradientColors: [.green.opacity(0.4), .mint.opacity(0.3)]
                 )
                 
-                SummaryCard(
+                ModernSummaryCard(
                     title: "Resources",
                     value: formatBytes(project.summaryResourceSize != 0 ? project.summaryResourceSize : project.totalResourceSize),
-                    systemImage: "photo",
-                    color: .orange
+                    systemImage: "photo.fill",
+                    gradientColors: [.orange.opacity(0.4), .yellow.opacity(0.3)]
                 )
                 
-                SummaryCard(
+                ModernSummaryCard(
                     title: "Unused Code",
                     value: formatBytes(project.unusedCodeSize),
-                    systemImage: "bolt.slash",
-                    color: .red
+                    systemImage: "bolt.slash.fill",
+                    gradientColors: [.red.opacity(0.4), .pink.opacity(0.3)]
                 )
                 
-                SummaryCard(
+                ModernSummaryCard(
                     title: "Frameworks",
                     value: formatBytes(project.summaryFrameworkSize != 0 ? project.summaryFrameworkSize : project.totalFrameworkSize),
-                    systemImage: "building.2",
-                    color: .purple
+                    systemImage: "building.2.fill",
+                    gradientColors: [.purple.opacity(0.4), .indigo.opacity(0.3)]
                 )
                 
-                SummaryCard(
+                ModernSummaryCard(
                     title: "Unused Resources",
                     value: formatBytes(project.unusedResourceSize),
-                    systemImage: "trash",
-                    color: .pink
+                    systemImage: "trash.fill",
+                    gradientColors: [.pink.opacity(0.4), .red.opacity(0.2)]
                 )
                 
                 if !project.duplicateCodeGroups.isEmpty {
-                    SummaryCard(
+                    ModernSummaryCard(
                         title: "代码重复",
                         value: "\(project.duplicateCodeGroups.count) 组",
-                        systemImage: "doc.on.doc",
-                        color: .mint
+                        systemImage: "doc.on.doc.fill",
+                        gradientColors: [.mint.opacity(0.4), .teal.opacity(0.3)]
                     )
                 }
                 if !project.duplicateResourceGroups.isEmpty {
-                    SummaryCard(
+                    ModernSummaryCard(
                         title: "资源重复",
                         value: "\(project.duplicateResourceGroups.count) 组",
                         systemImage: "photo.on.rectangle.angled",
-                        color: .cyan
+                        gradientColors: [.cyan.opacity(0.4), .blue.opacity(0.3)]
                     )
                 }
                 if let pods = project.podsDependencyResult, !pods.pods.isEmpty {
-                    SummaryCard(
+                    ModernSummaryCard(
                         title: "Pods 依赖",
                         value: "\(pods.pods.count) 个",
-                        systemImage: "square.stack.3d.up",
-                        color: .indigo
+                        systemImage: "square.stack.3d.up.fill",
+                        gradientColors: [.indigo.opacity(0.4), .purple.opacity(0.3)]
                     )
                 }
             }
             
-            if !project.duplicateCodeGroups.isEmpty {
+            // Additional Info Section
+            if !project.duplicateCodeGroups.isEmpty || !project.duplicateResourceGroups.isEmpty || (project.podsDependencyResult != nil && !project.podsDependencyResult!.pods.isEmpty) {
                 Divider()
-                Text("代码重复")
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                Text("共 \(project.duplicateCodeGroups.count) 组重复代码，涉及 \(project.duplicateCodeGroups.flatMap { $0.entries.map(\.relativePath) }.uniqued().count) 个文件。")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-            if !project.duplicateResourceGroups.isEmpty {
-                Divider()
-                Text("资源重复")
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                Text("共 \(project.duplicateResourceGroups.count) 组重复资源，涉及 \(project.duplicateResourceGroups.flatMap { $0.entries.map(\.relativePath) }.uniqued().count) 个文件。")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-            if let pods = project.podsDependencyResult, !pods.pods.isEmpty {
-                Divider()
-                Text("Pods 依赖")
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                Text("共 \(pods.pods.count) 个 Pod（来自 \(pods.podfileLockPath ?? "Podfile.lock")）。")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                
+                VStack(alignment: .leading, spacing: 12) {
+                    if !project.duplicateCodeGroups.isEmpty {
+                        InfoRow(
+                            icon: "doc.on.doc",
+                            iconColor: .mint,
+                            title: "代码重复",
+                            detail: "\(project.duplicateCodeGroups.count) 组重复代码，涉及 \(project.duplicateCodeGroups.flatMap { $0.entries.map(\.relativePath) }.uniqued().count) 个文件"
+                        )
+                    }
+                    if !project.duplicateResourceGroups.isEmpty {
+                        InfoRow(
+                            icon: "photo.on.rectangle.angled",
+                            iconColor: .cyan,
+                            title: "资源重复",
+                            detail: "\(project.duplicateResourceGroups.count) 组重复资源，涉及 \(project.duplicateResourceGroups.flatMap { $0.entries.map(\.relativePath) }.uniqued().count) 个文件"
+                        )
+                    }
+                    if let pods = project.podsDependencyResult, !pods.pods.isEmpty {
+                        InfoRow(
+                            icon: "square.stack.3d.up",
+                            iconColor: .indigo,
+                            title: "Pods 依赖",
+                            detail: "\(pods.pods.count) 个 Pod（来自 \(pods.podfileLockPath ?? "Podfile.lock")）"
+                        )
+                    }
+                }
             }
         }
-        .padding()
-        .background(Color(NSColor.controlBackgroundColor))
-        .cornerRadius(12)
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color(NSColor.controlBackgroundColor))
+                .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 4)
+        )
     }
     
     private func formatBytes(_ bytes: Int64) -> String {
@@ -1000,6 +1462,77 @@ struct AnalysisSummaryView: View {
         formatter.allowedUnits = [.useKB, .useMB, .useGB]
         formatter.countStyle = .file
         return formatter.string(fromByteCount: bytes)
+    }
+}
+
+struct ModernSummaryCard: View {
+    let title: String
+    let value: String
+    let systemImage: String
+    let gradientColors: [Color]
+    
+    var body: some View {
+        VStack(spacing: 10) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(
+                        LinearGradient(
+                            colors: gradientColors,
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 44, height: 44)
+                
+                Image(systemName: systemImage)
+                    .font(.system(size: 20))
+                    .foregroundColor(gradientColors[0].opacity(2.5))
+            }
+            
+            Text(value)
+                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .foregroundColor(.primary)
+            
+            Text(title)
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 14)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(NSColor.textBackgroundColor).opacity(0.4))
+        )
+    }
+}
+
+struct InfoRow: View {
+    let icon: String
+    let iconColor: Color
+    let title: String
+    let detail: String
+    
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.system(size: 14))
+                .foregroundColor(iconColor)
+                .frame(width: 24, height: 24)
+                .background(iconColor.opacity(0.15))
+                .cornerRadius(6)
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                Text(detail)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            
+            Spacer()
+        }
     }
 }
 
